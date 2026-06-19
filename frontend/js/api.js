@@ -11,7 +11,7 @@ const API = {
    * Inicializa el API helper
    */
   init() {
-    this.token = localStorage.getItem('mk_token');
+    this.token = sessionStorage.getItem('mk_token');
   },
 
   /**
@@ -20,9 +20,9 @@ const API = {
   setToken(token) {
     this.token = token;
     if (token) {
-      localStorage.setItem('mk_token', token);
+      sessionStorage.setItem('mk_token', token);
     } else {
-      localStorage.removeItem('mk_token');
+      sessionStorage.removeItem('mk_token');
     }
   },
 
@@ -121,7 +121,7 @@ const API = {
    */
   logout() {
     this.setToken(null);
-    localStorage.removeItem('mk_user');
+    sessionStorage.removeItem('mk_user');
   },
 
   /**
@@ -135,7 +135,7 @@ const API = {
    * Obtiene el usuario actual del localStorage
    */
   getCurrentUser() {
-    const userStr = localStorage.getItem('mk_user');
+    const userStr = sessionStorage.getItem('mk_user');
     return userStr ? JSON.parse(userStr) : null;
   }
 };

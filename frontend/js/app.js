@@ -19,7 +19,7 @@ const App = {
       const result = await API.get('/auth/verify');
       if (result.success) {
         this.user = result.data;
-        localStorage.setItem('mk_user', JSON.stringify(this.user));
+        sessionStorage.setItem('mk_user', JSON.stringify(this.user));
         this.showApp();
         this.handleRoute();
         window.addEventListener('hashchange', () => this.handleRoute());
@@ -27,7 +27,7 @@ const App = {
       }
       // Token expirado/inválido: limpiar y mostrar login
       API.setToken(null);
-      localStorage.removeItem('mk_user');
+      sessionStorage.removeItem('mk_user');
       this.user = null;
     }
 
@@ -106,7 +106,7 @@ const App = {
       if (result.success) {
         API.setToken(result.data.token);
         this.user = result.data.user;
-        localStorage.setItem('mk_user', JSON.stringify(this.user));
+        sessionStorage.setItem('mk_user', JSON.stringify(this.user));
         this.showApp();
         window.location.hash = '#dashboard';
       } else {
