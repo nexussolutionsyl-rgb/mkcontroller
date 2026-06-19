@@ -147,16 +147,16 @@ const nexusmkController = {
       connection = await poolConn.getConnection();
 
       const [dispositivos] = await connection.execute(
-        "SELECT COUNT(*) as total FROM dispositivos_mikrotik WHERE estado=1"
+        "SELECT COUNT(*) as total FROM `dispositivos_mikrotik` WHERE `estado`=1"
       );
       const [interfaces] = await connection.execute(
-        "SELECT COUNT(*) as total FROM interfaces_wireguard"
+        "SELECT COUNT(*) as total FROM `interfaces_wireguard`"
       );
       const [peers] = await connection.execute(
-        "SELECT COUNT(*) as total FROM peers_wireguard WHERE estado=1"
+        "SELECT COUNT(*) as total FROM `peers_wireguard` WHERE `estado`=1"
       );
       const [reglas] = await connection.execute(
-        "SELECT COUNT(*) as total FROM reglas_firewall WHERE estado=1"
+        "SELECT COUNT(*) as total FROM `reglas_firewall` WHERE `estado`=1"
       );
 
       res.json({
@@ -170,7 +170,7 @@ const nexusmkController = {
       });
     } catch (error) {
       console.error('[nexusMK] Error en stats:', error);
-      res.status(500).json({ success: false, message: 'Error al obtener estadísticas' });
+      res.status(500).json({ success: false, message: 'Error al obtener estadísticas', error: error.message });
     } finally {
       if (connection) connection.release();
     }
@@ -186,13 +186,13 @@ const nexusmkController = {
       const poolConn = getPool();
       connection = await poolConn.getConnection();
       const [rows] = await connection.execute(
-        "SELECT * FROM dispositivos_mikrotik WHERE estado=1 ORDER BY id_dispositivo"
+        "SELECT * FROM `dispositivos_mikrotik` WHERE `estado`=1 ORDER BY `id_dispositivo`"
       );
 
       res.json({ success: true, data: rows });
     } catch (error) {
       console.error('[nexusMK] Error en dispositivos:', error);
-      res.status(500).json({ success: false, message: 'Error al obtener dispositivos' });
+      res.status(500).json({ success: false, message: 'Error al obtener dispositivos', error: error.message });
     } finally {
       if (connection) connection.release();
     }
