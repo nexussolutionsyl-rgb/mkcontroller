@@ -137,10 +137,24 @@ $code3 = runCmd($cmd3, $out3);
 logMsg("npm ci: $out3");
 
 // 7. Reiniciar app (Passenger)
+// Nota: passenger-config requiere Ruby y falla en entornos cPanel vía exec() de PHP.
+// Alternativa: tocar tmp/restart.txt (método estándar de Passenger para reinicio)
 logMsg("Reiniciando app...");
-$cmd4 = "cd $repoPath && passenger-config restart-app . 2>&1";
-$code4 = runCmd($cmd4, $out4);
-logMsg("Restart: $out4");
+$restartFile = $repoPath . '/tmp/restart.txt';
+if (!is_dir(dirname($restartFile))) {
+    mkdir(dirname($restartFile), 0755, true);
+}
+$code4 = 0;
+$out4 = '';
+if (file_put_contents($restartFile, date('Y-m-d H:i:s')) !== false) {
+    $out4 = "App restarted via tmp/restart.txt";
+    logMsg("Restart: $out4");
+} else {
+    // Fallback: intentar con passenger-config
+    $cmd4 = "cd $repoPath && passenger-config restart-app . 2>&1";
+    $code4 = runCmd($cmd4, $out4);
+    logMsg("Restart (fallback): $out4");
+}
 
 // 8. Respuesta exitosa
 $commitMsg = $data['head_commit']['message'] ?? 'unknown';
