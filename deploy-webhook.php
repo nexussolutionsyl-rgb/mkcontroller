@@ -142,7 +142,7 @@ $cmd3 = "cd $repoPath/backend && npm ci --production 2>&1";
 $code3 = runCmd($cmd3, $out3);
 logMsg("npm ci: $out3");
 
-// 8. Reiniciar app (Passenger)
+// 8. Reiniciar app (Passenger + Node.js process)
 // Nota: passenger-config requiere Ruby y falla en entornos cPanel vía exec() de PHP.
 // Alternativa: tocar tmp/restart.txt (método estándar de Passenger para reinicio)
 logMsg("Reiniciando app...");
@@ -161,6 +161,24 @@ if (file_put_contents($restartFile, date('Y-m-d H:i:s')) !== false) {
     $code4 = runCmd($cmd4, $out4);
     logMsg("Restart (fallback): $out4");
 }
+
+// 8b. Matar proceso Node.js independiente (iniciado por proxy.php en puerto 3001)
+// para que proxy.php lo reinicie con el código nuevo en la siguiente petición
+logMsg("Reiniciando servidor Node.js (puerto 3001)...");
+$pidFile = $repoPath . '/node.pid';
+if (file_exists($pidFile)) {
+    $pid = trim(file_get_contents($pidFile));
+    if ($pid && is_numeric($pid)) {
+        $cmdKill = "kill -9 $pid 2>&1";
+        runCmd($cmdKill, $outKill);
+        logMsg("Node process $pid killed: $outKill");
+        @unlink($pidFile);
+    }
+}
+// También matar cualquier proceso Node.js en el puerto 3001
+$cmdKillPort = "fuser -k 3001/tcp 2>&1 || kill \$(lsof -t -i:3001) 2>&1 || true";
+runCmd($cmdKillPort, $outKillPort);
+logMsg("Port 3001 cleanup: $outKillPort");
 
 // 9. Respuesta exitosa
 $commitMsg = $data['head_commit']['message'] ?? 'unknown';
