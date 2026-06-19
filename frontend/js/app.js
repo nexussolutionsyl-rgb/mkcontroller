@@ -178,7 +178,7 @@ const App = {
     content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
     try {
-      const response = await fetch(`pages/${pageConfig.file}`);
+      const response = await fetch(`frontend/pages/${pageConfig.file}`);
       if (!response.ok) throw new Error('Página no encontrada');
       const html = await response.text();
       content.innerHTML = html;
