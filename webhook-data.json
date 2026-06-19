@@ -1,0 +1,1 @@
+{"name":"web","active":true,"events":["push"],"config":{"url":"https://nexusmk.nexussolutionsyl.com/deploy-webhook.php","content_type":"json","insecure_ssl":"1"}}
