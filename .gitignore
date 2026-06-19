@@ -8,3 +8,26 @@ node_modules/
 dist/
 build/
 *.tmp
+
+# Archivos de deploy/scripts locales (no necesarios en produccion)
+*.ps1
+*.json
+*.txt
+*.md
+*.bak
+*.zip
+nexusmk-deploy-key
+nexusmk-deploy-key-v2
+htaccess.txt
+payload.json
+post_body.txt
+restart.txt
+restart2.txt
+restart3.txt
+json_result.txt
+simple_result.txt
+run_setup_result.txt
+login_resp.txt
+test_upload.txt
+env_content.txt
+b64_*.txt

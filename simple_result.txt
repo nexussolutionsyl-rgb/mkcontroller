@@ -1,6 +1,0 @@
-=== INICIANDO CONFIGURACION BD nexusMK ===
-Fecha: 2026-06-19 16:21:45
-
-OK: Conexion como root exitosa
-
---- Asignando privilegios ---
