@@ -130,9 +130,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// SPA fallback - servir index.html para rutas del frontend
+// SPA fallback - servir index.html desde la raíz del proyecto
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
 module.exports = app;

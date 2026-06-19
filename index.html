@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MkController - Administración MikroTik</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔷</text></svg>">
+  <link rel="stylesheet" href="frontend/css/styles.css">
+</head>
+<body>
+  <!-- ============================================ -->
+  <!-- Toast Notifications -->
+  <!-- ============================================ -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ============================================ -->
+  <!-- Login Page -->
+  <!-- ============================================ -->
+  <div id="login-page" class="login-page">
+    <div class="login-container">
+      <div class="login-card">
+        <div class="login-header">
+          <div class="login-logo">MK</div>
+          <h1>MkController</h1>
+          <p>Administración de Routers MikroTik</p>
+        </div>
+
+        <div id="login-error" class="login-error"></div>
+
+        <form id="login-form" class="login-form" autocomplete="off">
+          <div class="form-group">
+            <label for="login-username">Usuario</label>
+            <div class="input-group">
+              <span class="icon">👤</span>
+              <input type="text" id="login-username" placeholder="Ingrese su usuario" required autofocus>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="login-password">Contraseña</label>
+            <div class="input-group">
+              <span class="icon">🔒</span>
+              <input type="password" id="login-password" placeholder="Ingrese su contraseña" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-login">Iniciar Sesión</button>
+        </form>
+
+        <div class="login-footer">
+          MkController v3.0 &copy; 2024 - Todos los derechos reservados
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- App Layout -->
+  <!-- ============================================ -->
+  <div id="app-layout" class="app-layout" style="display:none;">
+    
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">MK</div>
+        <div class="sidebar-brand">
+          <h2>MkController</h2>
+          <span>Panel de Administración</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">Principal</div>
+        <a class="nav-item" data-page="dashboard" href="#dashboard" onclick="App.handleRoute()">
+          <span class="nav-icon">📊</span>
+          Dashboard
+        </a>
+        <a class="nav-item" data-page="routers" href="#routers" onclick="App.handleRoute()">
+          <span class="nav-icon">🌐</span>
+          Routers
+        </a>
+
+        <div class="nav-section">Servicios</div>
+        <a class="nav-item" data-page="hotspot" href="#hotspot" onclick="App.handleRoute()">
+          <span class="nav-icon">📡</span>
+          Hotspot
+        </a>
+        <a class="nav-item" data-page="commands" href="#commands" onclick="App.handleRoute()">
+          <span class="nav-icon">⚡</span>
+          Comandos
+        </a>
+
+        <div class="nav-section">nexusMK</div>
+        <a class="nav-item" data-page="nexusmk" href="#nexusmk" onclick="App.handleRoute()">
+          <span class="nav-icon">🔷</span>
+          Dashboard nexusMK
+        </a>
+
+        <div class="nav-section">Administración</div>
+        <a class="nav-item" data-page="users" href="#users" onclick="App.handleRoute()">
+          <span class="nav-icon">👥</span>
+          Usuarios
+        </a>
+        <a class="nav-item" data-page="clients" href="#clients" onclick="App.handleRoute()" id="nav-clients" style="display:none;">
+          <span class="nav-icon">🏢</span>
+          Clientes
+        </a>
+
+        <div class="nav-section">Acceso</div>
+        <a class="nav-item" data-page="winbox" href="#winbox" onclick="App.handleRoute()">
+          <span class="nav-icon">🔗</span>
+          WinBox / WebFig
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div id="sidebar-user-avatar" class="sidebar-user-avatar">SA</div>
+          <div class="sidebar-user-info">
+            <div id="sidebar-user-name" class="name">Usuario</div>
+            <div id="sidebar-user-role" class="role">Rol</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="top-header">
+        <button id="mobile-menu-btn" class="mobile-menu-btn">☰</button>
+        <h1 id="page-title" class="page-title">Dashboard</h1>
+        <div class="header-actions">
+          <a class="nav-item" data-page="profile" href="#profile" style="padding:6px 12px;border:none;" onclick="App.handleRoute()">
+            <span style="font-size:18px;">⚙️</span>
+          </a>
+          <button class="header-btn" onclick="App.logout()" title="Cerrar sesión">🚪</button>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div id="page-content" class="page-content">
+        <div class="loading">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- Footer / Version -->
+  <!-- ============================================ -->
+  <div style="text-align:center;padding:8px;font-size:11px;color:#888;border-top:1px solid #2a2a3e;background:#1a1a2e;">
+    MkController v3.0 | <span id="deploy-version">e5d8041</span> | Deploy automático vía Webhook
+  </div>
+
+  <!-- ============================================ -->
+  <!-- Scripts -->
+  <!-- ============================================ -->
+  <script src="frontend/js/api.js"></script>
+  <script src="frontend/js/app.js"></script>
+</body>
+</html>
