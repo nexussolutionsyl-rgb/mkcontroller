@@ -10,6 +10,9 @@ const { authenticate } = require('../middleware/auth');
 // Health check de conexión MySQL
 router.get('/health', nexusmkController.health);
 
+// Debug - diagnóstico (protegida)
+router.get('/debug', authenticate, nexusmkController.debug);
+
 // Login (no requiere autenticación previa)
 router.post('/login', nexusmkController.login);
 

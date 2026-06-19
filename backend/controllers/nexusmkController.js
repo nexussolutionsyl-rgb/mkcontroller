@@ -7,6 +7,7 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('../config/config');
+const { execSync } = require('child_process');
 
 // Cargar configuracion desde variables de entorno
 // Configurar en .env:
@@ -50,6 +51,70 @@ const TABLAS_PERMITIDAS = [
 ];
 
 const nexusmkController = {
+  /**
+   * Endpoint de diagnóstico - muestra versión del código y config
+   * GET /api/nexusmk/debug
+   */
+  async debug(req, res) {
+    try {
+      let commitHash = 'unknown';
+      try {
+        commitHash = execSync('git rev-parse HEAD', { encoding: 'utf8', timeout: 5000 }).trim();
+      } catch (e) {
+        commitHash = 'no-git';
+      }
+      
+      // Probar conexión MySQL
+      let dbStatus = 'unknown';
+      let dbError = null;
+      let connection = null;
+      try {
+        const poolConn = getPool();
+        connection = await poolConn.getConnection();
+        await connection.ping();
+        dbStatus = 'connected';
+        
+        // Probar query simple
+        try {
+          const [r] = await connection.execute('SELECT 1 as test');
+          dbStatus = 'query-ok';
+        } catch (e) {
+          dbStatus = 'query-failed';
+          dbError = e.message;
+        }
+      } catch (e) {
+        dbStatus = 'connection-failed';
+        dbError = e.message;
+      } finally {
+        if (connection) connection.release();
+      }
+
+      res.json({
+        success: true,
+        data: {
+          commit: commitHash,
+          node_version: process.version,
+          db_config: {
+            host: DB_CONFIG.host,
+            user: DB_CONFIG.user,
+            database: DB_CONFIG.database,
+            password_set: !!DB_CONFIG.password
+          },
+          db_status: dbStatus,
+          db_error: dbError,
+          env_vars: {
+            NEXUSMK_DB_HOST: process.env.NEXUSMK_DB_HOST ? 'set' : 'not-set',
+            NEXUSMK_DB_USER: process.env.NEXUSMK_DB_USER ? 'set' : 'not-set',
+            NEXUSMK_DB_PASSWORD: process.env.NEXUSMK_DB_PASSWORD ? 'set' : 'not-set',
+            NEXUSMK_DB_NAME: process.env.NEXUSMK_DB_NAME ? 'set' : 'not-set'
+          }
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error en debug', error: error.message });
+    }
+  },
+
   /**
    * Inicio de sesión en nexusMK
    * POST /api/nexusmk/login
@@ -146,52 +211,24 @@ const nexusmkController = {
       const poolConn = getPool();
       connection = await poolConn.getConnection();
 
-      // Intentar con WHERE estado=1, si falla usar COUNT(*) sin filtro
-      let total_dispositivos = 0, total_interfaces = 0, total_peers = 0, total_reglas = 0;
-
-      try {
-        const [d] = await connection.execute("SELECT COUNT(*) as total FROM `dispositivos_mikrotik` WHERE `estado`=1");
-        total_dispositivos = d[0].total;
-      } catch (e) {
-        const [d] = await connection.execute("SELECT COUNT(*) as total FROM `dispositivos_mikrotik`");
-        total_dispositivos = d[0].total;
-      }
-
-      try {
-        const [i] = await connection.execute("SELECT COUNT(*) as total FROM `interfaces_wireguard`");
-        total_interfaces = i[0].total;
-      } catch (e) {
-        total_interfaces = 0;
-      }
-
-      try {
-        const [p] = await connection.execute("SELECT COUNT(*) as total FROM `peers_wireguard` WHERE `estado`=1");
-        total_peers = p[0].total;
-      } catch (e) {
-        const [p] = await connection.execute("SELECT COUNT(*) as total FROM `peers_wireguard`");
-        total_peers = p[0].total;
-      }
-
-      try {
-        const [r] = await connection.execute("SELECT COUNT(*) as total FROM `reglas_firewall` WHERE `estado`=1");
-        total_reglas = r[0].total;
-      } catch (e) {
-        const [r] = await connection.execute("SELECT COUNT(*) as total FROM `reglas_firewall`");
-        total_reglas = r[0].total;
-      }
+      // Usar queries sin WHERE para evitar cualquier problema de columna
+      const [d] = await connection.execute("SELECT COUNT(*) as total FROM `dispositivos_mikrotik`");
+      const [i] = await connection.execute("SELECT COUNT(*) as total FROM `interfaces_wireguard`");
+      const [p] = await connection.execute("SELECT COUNT(*) as total FROM `peers_wireguard`");
+      const [r] = await connection.execute("SELECT COUNT(*) as total FROM `reglas_firewall`");
 
       res.json({
         success: true,
         data: {
-          total_dispositivos,
-          total_interfaces,
-          total_peers,
-          total_reglas
+          total_dispositivos: d[0].total,
+          total_interfaces: i[0].total,
+          total_peers: p[0].total,
+          total_reglas: r[0].total
         }
       });
     } catch (error) {
       console.error('[nexusMK] Error en stats:', error);
-      res.status(500).json({ success: false, message: 'Error al obtener estadísticas', error: error.message });
+      res.status(500).json({ success: false, message: 'Error al obtener estadísticas', error: error.message, stack: error.stack });
     } finally {
       if (connection) connection.release();
     }
@@ -207,22 +244,14 @@ const nexusmkController = {
       const poolConn = getPool();
       connection = await poolConn.getConnection();
       
-      let rows;
-      try {
-        [rows] = await connection.execute(
-          "SELECT * FROM `dispositivos_mikrotik` WHERE `estado`=1 ORDER BY `id_dispositivo`"
-        );
-      } catch (e) {
-        // Si la columna estado no existe, obtener todos
-        [rows] = await connection.execute(
-          "SELECT * FROM `dispositivos_mikrotik` ORDER BY `id_dispositivo`"
-        );
-      }
+      const [rows] = await connection.execute(
+        "SELECT * FROM `dispositivos_mikrotik` ORDER BY `id_dispositivo`"
+      );
 
       res.json({ success: true, data: rows });
     } catch (error) {
       console.error('[nexusMK] Error en dispositivos:', error);
-      res.status(500).json({ success: false, message: 'Error al obtener dispositivos', error: error.message });
+      res.status(500).json({ success: false, message: 'Error al obtener dispositivos', error: error.message, stack: error.stack });
     } finally {
       if (connection) connection.release();
     }
