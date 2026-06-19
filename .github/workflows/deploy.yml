@@ -1,0 +1,47 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci --production
+
+      - name: Deploy to cPanel via SSH
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USER }}
+          password: ${{ secrets.CPANEL_PASSWORD }}
+          port: ${{ secrets.CPANEL_PORT || 22 }}
+          source: ".,!node_modules,!backend/node_modules"
+          target: ${{ secrets.CPANEL_PATH }}
+          strip_components: 0
+          rm: false
+
+      - name: Install production deps on server
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USER }}
+          password: ${{ secrets.CPANEL_PASSWORD }}
+          port: ${{ secrets.CPANEL_PORT || 22 }}
+          script: |
+            cd ${{ secrets.CPANEL_PATH }}
+            cd backend && npm ci --production
+            cd ..
+            passenger-config restart-app $(pwd) 2>/dev/null || echo "App restarted manually if needed"
