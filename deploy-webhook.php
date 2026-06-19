@@ -130,13 +130,19 @@ if ($code2 !== 0) {
     exit;
 }
 
-// 6. Reinstalar dependencias
+// 6. Limpiar archivos eliminados del repo (git clean)
+logMsg("Limpiando archivos no trackeados...");
+$cmdClean = "cd $repoPath && git clean -fd -e node_modules -e backend/node_modules 2>&1";
+$codeClean = runCmd($cmdClean, $outClean);
+logMsg("Clean: $outClean");
+
+// 7. Reinstalar dependencias
 logMsg("Reinstalando dependencias...");
 $cmd3 = "cd $repoPath/backend && npm ci --production 2>&1";
 $code3 = runCmd($cmd3, $out3);
 logMsg("npm ci: $out3");
 
-// 7. Reiniciar app (Passenger)
+// 8. Reiniciar app (Passenger)
 // Nota: passenger-config requiere Ruby y falla en entornos cPanel vía exec() de PHP.
 // Alternativa: tocar tmp/restart.txt (método estándar de Passenger para reinicio)
 logMsg("Reiniciando app...");
@@ -156,7 +162,7 @@ if (file_put_contents($restartFile, date('Y-m-d H:i:s')) !== false) {
     logMsg("Restart (fallback): $out4");
 }
 
-// 8. Respuesta exitosa
+// 9. Respuesta exitosa
 $commitMsg = $data['head_commit']['message'] ?? 'unknown';
 $author = $data['head_commit']['author']['name'] ?? 'unknown';
 $commitId = substr($data['head_commit']['id'] ?? '', 0, 8);
@@ -169,6 +175,7 @@ $result = [
     'output' => [
         'fetch' => $out1,
         'reset' => $out2,
+        'clean' => $outClean,
         'npm' => $out3,
         'restart' => $out4
     ]
