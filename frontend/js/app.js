@@ -13,24 +13,26 @@ const App = {
   async init() {
     console.log('[App] Inicializando MkController...');
 
-    // Verificar autenticación
+    // Verificar si hay sesión previa válida
     this.user = API.getCurrentUser();
-
     if (API.isAuthenticated() && this.user) {
-      // Verificar token
       const result = await API.get('/auth/verify');
       if (result.success) {
         this.user = result.data;
         localStorage.setItem('mk_user', JSON.stringify(this.user));
         this.showApp();
-      } else {
-        this.showLogin();
+        this.handleRoute();
+        window.addEventListener('hashchange', () => this.handleRoute());
+        return;
       }
-    } else {
-      this.showLogin();
+      // Token expirado/inválido: limpiar y mostrar login
+      API.setToken(null);
+      localStorage.removeItem('mk_user');
+      this.user = null;
     }
 
-    // Escuchar cambios de hash
+    // Mostrar login
+    this.showLogin();
     window.addEventListener('hashchange', () => this.handleRoute());
   },
 
