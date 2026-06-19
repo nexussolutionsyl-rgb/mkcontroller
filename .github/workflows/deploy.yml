@@ -5,7 +5,7 @@ on:
     branches: [master]
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,7 +21,7 @@ jobs:
           cd backend
           npm ci --production
 
-      - name: Deploy to cPanel via SSH
+      - name: Deploy to cPanel via SSH key
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.CPANEL_HOST }}
@@ -32,6 +32,9 @@ jobs:
           target: ${{ secrets.CPANEL_PATH }}
           strip_components: 0
           rm: false
+          timeout: 60s
+          command_timeout: 60s
+          proxy_timeout: 60s
 
       - name: Install production deps on server
         uses: appleboy/ssh-action@v0.1.5
@@ -40,6 +43,8 @@ jobs:
           username: ${{ secrets.CPANEL_USER }}
           password: ${{ secrets.CPANEL_PASSWORD }}
           port: ${{ secrets.CPANEL_PORT || 22 }}
+          timeout: 60s
+          command_timeout: 60s
           script: |
             cd ${{ secrets.CPANEL_PATH }}
             cd backend && npm ci --production
