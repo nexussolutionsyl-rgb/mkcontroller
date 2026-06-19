@@ -20,6 +20,13 @@ $secret = getenv('WEBHOOK_SECRET') ?: 'cambia-esta-clave-secreta';
 $repoPath = __DIR__; // Asume que el webhook está en la raíz del proyecto
 $branch = 'master';
 $logFile = __DIR__ . '/deploy-webhook.log';
+
+// ─── RUTAS DEL SERVIDOR (cPanel con alt-nodejs16) ──────────
+// Node.js y Passenger no están en el PATH normal de cPanel
+$nodeBin = '/opt/alt/alt-nodejs16/root/usr/bin';
+$passengerBin = '/opt/cpanel/ea-ruby27/root/usr/bin';
+$pathEnv = "/home/nexusyl/.local/bin:/home/nexusyl/bin:/usr/local/bin:/usr/bin:$nodeBin:$passengerBin";
+// ─────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────
 
 // Headers de respuesta
@@ -32,11 +39,14 @@ function logMsg($msg) {
     file_put_contents($logFile, $line, FILE_APPEND);
 }
 
-// Función para ejecutar comandos
+// Función para ejecutar comandos con PATH extendido
 function runCmd($cmd, &$output = []) {
+    global $pathEnv;
     $resultCode = 0;
     $result = [];
-    exec($cmd . ' 2>&1', $result, $resultCode);
+    // Prepend las rutas de Node.js y Passenger al PATH
+    $fullCmd = "export PATH=\"$pathEnv:\$PATH\" && $cmd";
+    exec($fullCmd . ' 2>&1', $result, $resultCode);
     $output = implode("\n", $result);
     return $resultCode;
 }
