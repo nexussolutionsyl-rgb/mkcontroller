@@ -15,11 +15,13 @@ const { execSync } = require('child_process');
 //   NEXUSMK_DB_USER=nexusyl_nexusmk
 //   NEXUSMK_DB_PASSWORD=tu_password
 //   NEXUSMK_DB_NAME=nexusyl_nexusmk
+// Usar la misma configuracion MySQL que el authController (config.mysql)
+// con fallback a variables de entorno especificas de nexusMK
 const DB_CONFIG = {
-  host: process.env.NEXUSMK_DB_HOST || 'localhost',
-  user: process.env.NEXUSMK_DB_USER || 'nexusyl_nexusmk',
-  password: process.env.NEXUSMK_DB_PASSWORD || '',
-  database: process.env.NEXUSMK_DB_NAME || 'nexusyl_nexusmk',
+  host: process.env.NEXUSMK_DB_HOST || config.mysql?.host || 'localhost',
+  user: process.env.NEXUSMK_DB_USER || config.mysql?.user || 'nexusyl_nexusmk',
+  password: process.env.NEXUSMK_DB_PASSWORD || config.mysql?.password || '',
+  database: process.env.NEXUSMK_DB_NAME || config.mysql?.database || 'nexusyl_nexusmk',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
