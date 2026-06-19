@@ -208,7 +208,7 @@ const App = {
 
     const script = document.createElement('script');
     script.id = 'page-script';
-    script.src = `js/pages/${page}.js`;
+    script.src = `frontend/js/pages/${page}.js`;
     script.onerror = () => console.log(`[App] No hay script para la página: ${page}`);
     document.body.appendChild(script);
   },
