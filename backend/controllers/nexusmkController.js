@@ -248,7 +248,7 @@ const nexusmkController = {
       connection = await poolConn.getConnection();
       
       const [rows] = await connection.execute(
-        "SELECT * FROM `dispositivos_mikrotik` ORDER BY `id_dispositivo`"
+        "SELECT * FROM `dispositivos_mikrotik` ORDER BY `id`"
       );
 
       res.json({ success: true, data: rows });
