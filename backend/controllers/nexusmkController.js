@@ -146,26 +146,47 @@ const nexusmkController = {
       const poolConn = getPool();
       connection = await poolConn.getConnection();
 
-      const [dispositivos] = await connection.execute(
-        "SELECT COUNT(*) as total FROM `dispositivos_mikrotik` WHERE `estado`=1"
-      );
-      const [interfaces] = await connection.execute(
-        "SELECT COUNT(*) as total FROM `interfaces_wireguard`"
-      );
-      const [peers] = await connection.execute(
-        "SELECT COUNT(*) as total FROM `peers_wireguard` WHERE `estado`=1"
-      );
-      const [reglas] = await connection.execute(
-        "SELECT COUNT(*) as total FROM `reglas_firewall` WHERE `estado`=1"
-      );
+      // Intentar con WHERE estado=1, si falla usar COUNT(*) sin filtro
+      let total_dispositivos = 0, total_interfaces = 0, total_peers = 0, total_reglas = 0;
+
+      try {
+        const [d] = await connection.execute("SELECT COUNT(*) as total FROM `dispositivos_mikrotik` WHERE `estado`=1");
+        total_dispositivos = d[0].total;
+      } catch (e) {
+        const [d] = await connection.execute("SELECT COUNT(*) as total FROM `dispositivos_mikrotik`");
+        total_dispositivos = d[0].total;
+      }
+
+      try {
+        const [i] = await connection.execute("SELECT COUNT(*) as total FROM `interfaces_wireguard`");
+        total_interfaces = i[0].total;
+      } catch (e) {
+        total_interfaces = 0;
+      }
+
+      try {
+        const [p] = await connection.execute("SELECT COUNT(*) as total FROM `peers_wireguard` WHERE `estado`=1");
+        total_peers = p[0].total;
+      } catch (e) {
+        const [p] = await connection.execute("SELECT COUNT(*) as total FROM `peers_wireguard`");
+        total_peers = p[0].total;
+      }
+
+      try {
+        const [r] = await connection.execute("SELECT COUNT(*) as total FROM `reglas_firewall` WHERE `estado`=1");
+        total_reglas = r[0].total;
+      } catch (e) {
+        const [r] = await connection.execute("SELECT COUNT(*) as total FROM `reglas_firewall`");
+        total_reglas = r[0].total;
+      }
 
       res.json({
         success: true,
         data: {
-          total_dispositivos: dispositivos[0].total,
-          total_interfaces: interfaces[0].total,
-          total_peers: peers[0].total,
-          total_reglas: reglas[0].total
+          total_dispositivos,
+          total_interfaces,
+          total_peers,
+          total_reglas
         }
       });
     } catch (error) {
@@ -185,9 +206,18 @@ const nexusmkController = {
     try {
       const poolConn = getPool();
       connection = await poolConn.getConnection();
-      const [rows] = await connection.execute(
-        "SELECT * FROM `dispositivos_mikrotik` WHERE `estado`=1 ORDER BY `id_dispositivo`"
-      );
+      
+      let rows;
+      try {
+        [rows] = await connection.execute(
+          "SELECT * FROM `dispositivos_mikrotik` WHERE `estado`=1 ORDER BY `id_dispositivo`"
+        );
+      } catch (e) {
+        // Si la columna estado no existe, obtener todos
+        [rows] = await connection.execute(
+          "SELECT * FROM `dispositivos_mikrotik` ORDER BY `id_dispositivo`"
+        );
+      }
 
       res.json({ success: true, data: rows });
     } catch (error) {
