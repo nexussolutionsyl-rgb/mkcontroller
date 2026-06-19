@@ -1,0 +1,105 @@
+<!-- Clientes - Gestión de clientes (SuperAdmin) -->
+<div>
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-client" placeholder="Buscar cliente..." oninput="filterClients()">
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-primary" onclick="showAddClientModal()">+ Nuevo Cliente</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Empresa</th>
+            <th>Email</th>
+            <th>Plan</th>
+            <th>Routers</th>
+            <th>Estado</th>
+            <th>Creado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="clients-table-body">
+          <tr><td colspan="8" class="empty-state"><p>Cargando clientes...</p></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Cliente -->
+<div id="client-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="client-modal-title">Nuevo Cliente</h3>
+      <button class="modal-close" onclick="closeModal('client-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="client-form">
+        <input type="hidden" id="client-id">
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre del Contacto</label>
+            <input type="text" class="form-control" id="client-name" required>
+          </div>
+          <div class="form-group">
+            <label>Empresa</label>
+            <input type="text" class="form-control" id="client-company">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" class="form-control" id="client-email" required>
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="text" class="form-control" id="client-phone">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Dirección</label>
+          <input type="text" class="form-control" id="client-address">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Plan</label>
+            <select class="form-control" id="client-plan">
+              <option value="basic">Básico</option>
+              <option value="professional">Profesional</option>
+              <option value="enterprise">Empresarial</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select class="form-control" id="client-status">
+              <option value="active">Activo</option>
+              <option value="inactive">Inactivo</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Notas</label>
+          <textarea class="form-control" id="client-notes" rows="3"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('client-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveClient()">Guardar</button>
+    </div>
+  </div>
+</div>

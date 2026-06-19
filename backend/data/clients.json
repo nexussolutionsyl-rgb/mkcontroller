@@ -1,0 +1,15 @@
+[
+  {
+    "id": "de533cb4-d24b-4cb6-b021-8fdde1b9fd9a",
+    "name": "Cliente Demo",
+    "company": "Empresa Demo S.A.",
+    "email": "demo@empresa.com",
+    "phone": "+58 412-1234567",
+    "address": "Av. Principal, Caracas",
+    "plan": "professional",
+    "status": "active",
+    "notes": "Cliente de demostración",
+    "createdAt": "2026-06-19T12:03:10.050Z",
+    "updatedAt": "2026-06-19T12:03:10.050Z"
+  }
+]

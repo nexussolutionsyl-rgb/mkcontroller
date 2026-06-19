@@ -1,0 +1,79 @@
+<!-- Comandos - Ejecución remota -->
+<div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header">
+      <h3 class="card-title">Ejecutar Comando</h3>
+    </div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Router</label>
+          <select class="form-control" id="cmd-router">
+            <option value="">Seleccione un router...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Comando</label>
+          <input type="text" class="form-control" id="cmd-command" placeholder="/interface/print" 
+                 list="cmd-suggestions">
+          <datalist id="cmd-suggestions">
+            <option value="/system/identity/print">
+            <option value="/system/resource/print">
+            <option value="/interface/print">
+            <option value="/ip/address/print">
+            <option value="/ip/dhcp-server/lease/print">
+            <option value="/ip/firewall/filter/print">
+            <option value="/ip/firewall/connection/print">
+            <option value="/ip/hotspot/active/print">
+            <option value="/log/print">
+            <option value="/user/active/print">
+            <option value="/interface/monitor-traffic">
+            <option value="/system/reboot">
+            <option value="/ip/service/print">
+            <option value="/routing/ospf/neighbor/print">
+          </option></datalist>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Argumentos (JSON opcional)</label>
+        <input type="text" class="form-control" id="cmd-args" placeholder='{"?topics":"info"}'>
+      </div>
+      <button class="btn btn-primary" onclick="executeCommand()">▶ Ejecutar</button>
+      <button class="btn btn-secondary" onclick="clearOutput()">🗑️ Limpiar</button>
+    </div>
+  </div>
+
+  <!-- Comandos rápidos -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header">
+      <h3 class="card-title">Comandos Rápidos</h3>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <button class="btn btn-sm btn-secondary" onclick="quickCommand('/system/identity/print')">Identidad</button>
+        <button class="btn btn-sm btn-secondary" onclick="quickCommand('/system/resource/print')">Recursos</button>
+        <button class="btn btn-sm btn-secondary" onclick="quickCommand('/interface/print')">Interfaces</button>
+        <button class="btn btn-sm btn-secondary" onclick="quickCommand('/ip/address/print')">IPs</button>
+        <button class="btn btn-sm btn-secondary" onclick="quickCommand('/ip/dhcp-server/lease/print')">DHCP Leases</button>
+        <button class="btn btn-sm btn-secondary" onclick="quickCommand('/ip/firewall/filter/print')">Firewall</button>
+        <button class="btn btn-sm btn-secondary" onclick="quickCommand('/ip/firewall/connection/print')">Conexiones</button>
+        <button class="btn btn-sm btn-secondary" onclick="quickCommand('/log/print')">Logs</button>
+        <button class="btn btn-sm btn-secondary" onclick="quickCommand('/user/active/print')">Usuarios Activos</button>
+        <button class="btn btn-sm btn-secondary" onclick="quickCommand('/ip/hotspot/active/print')">Hotspot Activos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Salida</h3>
+      <span id="cmd-status" style="font-size:12px;color:var(--text-muted);"></span>
+    </div>
+    <div class="card-body">
+      <div id="cmd-output" class="command-output">
+        Seleccione un router y ejecute un comando para ver la salida aquí.
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "65e68e9b-1bfe-4dec-9ad1-7a01c62df735",
+    "userId": "d9fb0961-7e0b-48ff-bd15-2e6cad77a157",
+    "username": "admin",
+    "action": "login",
+    "details": "Inicio de sesión",
+    "ip": "::1",
+    "userAgent": "curl/8.19.0",
+    "createdAt": "2026-06-19T12:03:24.527Z",
+    "updatedAt": "2026-06-19T12:03:24.527Z"
+  },
+  {
+    "id": "8036e16c-c8ee-43d4-935d-0fdbda761657",
+    "userId": "4737c702-ce2d-4033-9b74-3ae35a440c8c",
+    "username": "demo",
+    "action": "login",
+    "details": "Inicio de sesión",
+    "ip": "::1",
+    "userAgent": "curl/8.19.0",
+    "createdAt": "2026-06-19T12:03:51.907Z",
+    "updatedAt": "2026-06-19T12:03:51.907Z"
+  },
+  {
+    "id": "a0a732fa-d551-4378-9fdb-8bee14671de1",
+    "userId": "d9fb0961-7e0b-48ff-bd15-2e6cad77a157",
+    "username": "admin",
+    "action": "login",
+    "details": "Inicio de sesión",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+    "createdAt": "2026-06-19T12:26:16.006Z",
+    "updatedAt": "2026-06-19T12:26:16.006Z"
+  }
+]

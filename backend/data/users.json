@@ -1,0 +1,26 @@
+[
+  {
+    "id": "d9fb0961-7e0b-48ff-bd15-2e6cad77a157",
+    "username": "admin",
+    "password": "$2a$10$gazJ4UI3rf0OHGsz68LSCO4dG4XjhtNX6W18Xc0V/PBprUFLrO3QG",
+    "name": "Super Administrador",
+    "email": "admin@mkcontroller.com",
+    "role": "superadmin",
+    "clientId": null,
+    "status": "active",
+    "createdAt": "2026-06-19T12:03:10.047Z",
+    "updatedAt": "2026-06-19T12:03:10.048Z"
+  },
+  {
+    "id": "4737c702-ce2d-4033-9b74-3ae35a440c8c",
+    "username": "demo",
+    "password": "$2a$10$ADEaVMypMDGTQ16FQgEGLeDOCKC.RgOZnjjfAZ.NAoqprZaGaCa6y",
+    "name": "Usuario Demo",
+    "email": "demo@mkcontroller.com",
+    "role": "admin",
+    "clientId": "de533cb4-d24b-4cb6-b021-8fdde1b9fd9a",
+    "status": "active",
+    "createdAt": "2026-06-19T12:03:10.114Z",
+    "updatedAt": "2026-06-19T12:03:10.114Z"
+  }
+]

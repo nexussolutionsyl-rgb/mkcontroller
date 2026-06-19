@@ -1,0 +1,107 @@
+<!-- Dashboard - Vista SuperAdmin y Cliente -->
+<div id="dashboard-view">
+  <!-- Stats Grid -->
+  <div class="stats-grid" id="dashboard-stats">
+    <div class="stat-card">
+      <div class="stat-icon blue">🌐</div>
+      <div class="stat-info">
+        <div class="stat-label">Routers</div>
+        <div class="stat-value" id="stat-routers">0</div>
+        <div class="stat-detail">
+          <span class="status-dot online"></span> <span id="stat-routers-online">0</span> online
+          &middot;
+          <span class="status-dot offline"></span> <span id="stat-routers-offline">0</span> offline
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card" id="stat-card-clients">
+      <div class="stat-icon green">🏢</div>
+      <div class="stat-info">
+        <div class="stat-label">Clientes</div>
+        <div class="stat-value" id="stat-clients">0</div>
+        <div class="stat-detail">
+          <span id="stat-clients-active">0</span> activos
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon yellow">👥</div>
+      <div class="stat-info">
+        <div class="stat-label">Usuarios</div>
+        <div class="stat-value" id="stat-users">0</div>
+        <div class="stat-detail">
+          <span id="stat-users-admins">0</span> administradores
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon cyan">📡</div>
+      <div class="stat-info">
+        <div class="stat-label">Tickets Hotspot</div>
+        <div class="stat-value" id="stat-tickets">0</div>
+        <div class="stat-detail">
+          <span id="stat-tickets-active">0</span> activos
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grid de contenido -->
+  <div class="grid-2">
+    <!-- Información del Cliente (visible para clientes) -->
+    <div class="card" id="client-info-card" style="display:none;">
+      <div class="card-header">
+        <h3 class="card-title">Información del Cliente</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Cliente</div>
+            <div class="info-value" id="client-name">-</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Empresa</div>
+            <div class="info-value" id="client-company">-</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Plan</div>
+            <div class="info-value" id="client-plan">-</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Estado</div>
+            <div class="info-value" id="client-status">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actividad Reciente -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Actividad Reciente</h3>
+      </div>
+      <div class="card-body">
+        <ul class="activity-list" id="activity-list">
+          <li class="empty-state" style="padding:20px;">
+            <p>No hay actividad reciente</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Distribución de Planes (solo SuperAdmin) -->
+  <div class="card" id="plans-card" style="display:none;margin-top:16px;">
+    <div class="card-header">
+      <h3 class="card-title">Distribución de Planes</h3>
+    </div>
+    <div class="card-body">
+      <div id="plans-distribution">
+        <p class="empty-state" style="padding:10px;">Cargando...</p>
+      </div>
+    </div>
+  </div>
+</div>

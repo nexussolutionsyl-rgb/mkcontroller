@@ -1,0 +1,55 @@
+<!-- WinBox / WebFig - Acceso remoto -->
+<div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header">
+      <h3 class="card-title">Acceso Remoto a Routers</h3>
+    </div>
+    <div class="card-body">
+      <p style="color:var(--text-secondary);margin-bottom:16px;">
+        Acceda a sus routers MikroTik mediante WinBox o WebFig. Seleccione un router y el método de acceso.
+      </p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Seleccionar Router</label>
+          <select class="form-control" id="winbox-router" onchange="updateAccessLinks()">
+            <option value="">Seleccione un router...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Método de Acceso</label>
+          <select class="form-control" id="winbox-method" onchange="updateAccessLinks()">
+            <option value="winbox">WinBox</option>
+            <option value="webfig">WebFig</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Información de conexión -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header">
+      <h3 class="card-title">Información de Conexión</h3>
+    </div>
+    <div class="card-body">
+      <div id="winbox-info" class="empty-state" style="padding:20px;">
+        <div class="empty-icon">🔗</div>
+        <h3>Seleccione un router</h3>
+        <p>Elija un router y método de acceso para ver los detalles de conexión</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botones de acceso -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Acceso Directo</h3>
+    </div>
+    <div class="card-body">
+      <div id="winbox-actions" class="empty-state" style="padding:20px;">
+        <p>Seleccione un router para habilitar los accesos directos</p>
+      </div>
+    </div>
+  </div>
+</div>

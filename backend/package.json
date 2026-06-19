@@ -1,0 +1,23 @@
+{
+  "name": "mk-controller",
+  "version": "3.0.0",
+  "description": "Aplicación web para administración de routers MikroTik",
+  "main": "start.js",
+  "scripts": {
+    "start": "node start.js",
+    "dev": "node start.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.22.5",
+    "node-routeros": "^1.6.9",
+    "uuid": "^10.0.0",
+    "ws": "^8.18.0"
+  }
+}

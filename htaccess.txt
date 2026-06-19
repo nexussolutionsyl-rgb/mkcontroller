@@ -1,0 +1,21 @@
+﻿# MkController v3.0 - Configuración LiteSpeed
+# Permitir acceso al sitio
+Require all granted
+
+# PHP handler
+<FilesMatch "\.php$">
+    SetHandler application/x-httpd-ea-php74
+</FilesMatch>
+
+# Deny access to sensitive files
+<FilesMatch "\.(env|json|lock|md|gitignore)$">
+    Require all denied
+</FilesMatch>
+
+# SPA - servir frontend/index.html para rutas no encontradas
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ frontend/index.html [L]
+</IfModule>

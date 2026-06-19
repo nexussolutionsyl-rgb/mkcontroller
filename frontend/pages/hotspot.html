@@ -1,0 +1,162 @@
+<!-- Hotspot - Gestión de Tickets -->
+<div>
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-ticket" placeholder="Buscar ticket..." oninput="filterTickets()">
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-primary" onclick="showGenerateTicketModal()">+ Generar Ticket</button>
+    </div>
+  </div>
+
+  <!-- Selector de Router -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Seleccionar Router</label>
+          <select class="form-control" id="hotspot-router" onchange="loadHotspotData()">
+            <option value="">Seleccione un router...</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchHotspotTab('servers', this)">Servidores</button>
+    <button class="tab" onclick="switchHotspotTab('profiles', this)">Perfiles</button>
+    <button class="tab" onclick="switchHotspotTab('active', this)">Usuarios Activos</button>
+    <button class="tab" onclick="switchHotspotTab('tickets', this)">Tickets</button>
+  </div>
+
+  <!-- Tab: Servidores -->
+  <div id="tab-servers" class="tab-content active">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Servidores Hotspot</h3></div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Nombre</th><th>Interfaz</th><th>Pool de IPs</th><th>Perfil</th><th>Estado</th></tr>
+          </thead>
+          <tbody id="servers-table"><tr><td colspan="5" class="empty-state"><p>Seleccione un router</p></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Perfiles -->
+  <div id="tab-profiles" class="tab-content">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Perfiles Hotspot</h3></div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Nombre</th><th>Usuarios Compartidos</th><th>Límite de Velocidad</th><th>Timeout Sesión</th></tr>
+          </thead>
+          <tbody id="profiles-table"><tr><td colspan="4" class="empty-state"><p>Seleccione un router</p></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Usuarios Activos -->
+  <div id="tab-active" class="tab-content">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Usuarios Hotspot Activos</h3></div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Usuario</th><th>Dirección IP</th><th>MAC</th><th>Login</th><th>Tiempo</th><th>Bytes</th></tr>
+          </thead>
+          <tbody id="active-table"><tr><td colspan="6" class="empty-state"><p>Seleccione un router</p></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Tickets -->
+  <div id="tab-tickets" class="tab-content">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Tickets Generados</h3></div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Router</th><th>Servidor</th><th>Perfil</th><th>Límite</th><th>Generado por</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr>
+          </thead>
+          <tbody id="tickets-table"><tr><td colspan="8" class="empty-state"><p>Cargando tickets...</p></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Generar Ticket -->
+<div id="ticket-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Generar Ticket Hotspot</h3>
+      <button class="modal-close" onclick="closeTicketModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="ticket-form">
+        <div class="form-group">
+          <label>Router</label>
+          <select class="form-control" id="ticket-router" required>
+            <option value="">Seleccione...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Servidor Hotspot</label>
+          <select class="form-control" id="ticket-server" required>
+            <option value="">Seleccione...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Perfil</label>
+          <select class="form-control" id="ticket-profile" required>
+            <option value="">Seleccione...</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Límite de Tiempo</label>
+            <select class="form-control" id="ticket-uptime">
+              <option value="30m">30 minutos</option>
+              <option value="1h">1 hora</option>
+              <option value="6h">6 horas</option>
+              <option value="12h">12 horas</option>
+              <option value="1d" selected>1 día</option>
+              <option value="7d">7 días</option>
+              <option value="30d">30 días</option>
+              <option value="0">Sin límite</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Límite de Bytes</label>
+            <select class="form-control" id="ticket-bytes">
+              <option value="0">Sin límite</option>
+              <option value="104857600">100 MB</option>
+              <option value="524288000">500 MB</option>
+              <option value="1073741824">1 GB</option>
+              <option value="5368709120">5 GB</option>
+              <option value="10737418240">10 GB</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Comentario (opcional)</label>
+          <input type="text" class="form-control" id="ticket-comment" placeholder="Ej: Ticket para cliente VIP">
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeTicketModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="generateTicket()">Generar Ticket</button>
+    </div>
+  </div>
+</div>

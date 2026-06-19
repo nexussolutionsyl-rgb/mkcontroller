@@ -1,0 +1,131 @@
+<!-- Gestión de Routers -->
+<div>
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-router" placeholder="Buscar router..." oninput="filterRouters()">
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-primary" onclick="showAddRouterModal()">+ Agregar Router</button>
+    </div>
+  </div>
+
+  <!-- Tabla de Routers -->
+  <div class="card">
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Nombre</th>
+            <th>Host</th>
+            <th>Puerto</th>
+            <th>Cliente</th>
+            <th>Última Conexión</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="routers-table-body">
+          <tr>
+            <td colspan="7" class="empty-state">
+              <p>Cargando routers...</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Agregar/Editar Router -->
+<div id="router-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="router-modal-title">Agregar Router</h3>
+      <button class="modal-close" onclick="closeModal('router-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="router-form">
+        <input type="hidden" id="router-id">
+        
+        <div class="form-group">
+          <label>Nombre del Router</label>
+          <input type="text" class="form-control" id="router-name" placeholder="Ej: Router Principal" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Dirección IP / Host</label>
+            <input type="text" class="form-control" id="router-host" placeholder="192.168.1.1" required>
+          </div>
+          <div class="form-group">
+            <label>Puerto API</label>
+            <input type="number" class="form-control" id="router-port" placeholder="8728" value="8728">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Usuario</label>
+            <input type="text" class="form-control" id="router-username" placeholder="admin" required>
+          </div>
+          <div class="form-group">
+            <label>Contraseña</label>
+            <input type="password" class="form-control" id="router-password" placeholder="Contraseña">
+          </div>
+        </div>
+
+        <div class="form-group" id="router-client-group">
+          <label>Cliente</label>
+          <select class="form-control" id="router-client">
+            <option value="">Seleccione un cliente...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Comentario (opcional)</label>
+          <input type="text" class="form-control" id="router-comment" placeholder="Comentario...">
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('router-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRouter()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmar Eliminación -->
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3>Confirmar Eliminación</h3>
+      <button class="modal-close" onclick="closeModal('confirm-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-message">¿Está seguro de eliminar este router?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('confirm-modal')">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-btn" onclick="confirmDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalles del Router -->
+<div id="detail-modal" class="modal-overlay">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <h3 id="detail-title">Detalles del Router</h3>
+      <button class="modal-close" onclick="closeModal('detail-modal')">&times;</button>
+    </div>
+    <div class="modal-body" id="detail-body">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('detail-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>

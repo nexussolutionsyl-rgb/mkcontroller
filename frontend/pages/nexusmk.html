@@ -1,0 +1,73 @@
+<!-- nexusMK - Dashboard de Gestión MikroTik desde MySQL -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">
+      <span class="page-icon">🔷</span>
+      nexusMK
+    </h1>
+    <p class="page-subtitle">Gestión de MikroTik desde Base de Datos MySQL</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-outline" onclick="NexusMK.refresh()">
+      <span>🔄</span> Actualizar
+    </button>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid" id="nexusmk-stats">
+  <div class="stat-card">
+    <div class="stat-icon">🌐</div>
+    <div class="stat-value" id="stat-dispositivos">-</div>
+    <div class="stat-label">Dispositivos</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🔗</div>
+    <div class="stat-value" id="stat-interfaces">-</div>
+    <div class="stat-label">Interfaces WG</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">👥</div>
+    <div class="stat-value" id="stat-peers">-</div>
+    <div class="stat-label">Peers WG</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🛡️</div>
+    <div class="stat-value" id="stat-reglas">-</div>
+    <div class="stat-label">Reglas Firewall</div>
+  </div>
+</div>
+
+<!-- Dispositivos -->
+<div class="section-header">
+  <h2>Dispositivos MikroTik</h2>
+</div>
+<div class="card-grid" id="nexusmk-dispositivos">
+  <div class="loading-state">Cargando dispositivos...</div>
+</div>
+
+<!-- Información de Base de Datos -->
+<div class="section-header">
+  <h2>Información de Base de Datos</h2>
+</div>
+<div class="table-container">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Tabla</th>
+        <th>Registros</th>
+      </tr>
+    </thead>
+    <tbody id="nexusmk-dbinfo">
+      <tr><td colspan="2" class="text-center">Cargando...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Estado de conexión MySQL -->
+<div class="section-header">
+  <h2>Estado de Conexión</h2>
+</div>
+<div class="status-card" id="nexusmk-status">
+  <div class="status-indicator checking">Verificando conexión...</div>
+</div>
