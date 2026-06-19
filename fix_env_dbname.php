@@ -3,13 +3,24 @@
  * Script para corregir NEXUSMK_DB_NAME y MYSQL_DATABASE en el .env
  * La base de datos correcta es 'nexusmk' (no 'nexusyl_nexusmk')
  * porque authController.js se conecta a 'nexusmk' (hardcoded) y funciona
+ * 
+ * El .env que usa Node.js está en la RAÍZ del proyecto, no en backend/
  */
-$envFile = __DIR__ . '/backend/.env';
-if (!file_exists($envFile)) {
-    $envFile = __DIR__ . '/.env';
+$possibleFiles = [
+    __DIR__ . '/.env',           // /home/nexusyl/nexusmk.nexussolutionsyl.com/.env
+    __DIR__ . '/backend/.env',   // fallback
+];
+
+$envFile = null;
+foreach ($possibleFiles as $f) {
+    if (file_exists($f)) {
+        $envFile = $f;
+        break;
+    }
 }
-if (!file_exists($envFile)) {
-    die("ERROR: No se encontró .env en " . __DIR__ . "/backend/ ni en " . __DIR__ . "/\n");
+
+if (!$envFile) {
+    die("ERROR: No se encontró .env\n");
 }
 
 echo "=== CORRIGIENDO .env ===\n";
