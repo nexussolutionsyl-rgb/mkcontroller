@@ -35,6 +35,75 @@ function getIspPool() {
 const engine = new MikrotikEngine(config.isp?.mikrotik);
 
 // ============================================================
+// Helper: Obtener y configurar el router activo desde la BD
+// ============================================================
+let _lastRouterId = null;
+
+async function _ensureRouterConfigured() {
+  try {
+    const pool = getIspPool();
+    const [rows] = await pool.execute(
+      'SELECT id, host, port, username, password, `ssl` FROM isp_routers WHERE is_active = 1 LIMIT 1'
+    );
+
+    if (rows.length > 0) {
+      const router = rows[0];
+      // Solo reconfigurar si cambió el router activo
+      if (_lastRouterId !== router.id) {
+        engine.configure({
+          host: router.host,
+          port: router.port,
+          username: router.username,
+          password: router.password,
+          ssl: !!router.ssl
+        });
+        _lastRouterId = router.id;
+      }
+      return router;
+    }
+
+    // Si no hay router activo en BD, intentar con vars de entorno
+    const envHost = config.isp?.mikrotik?.host || process.env.ISP_MIKROTIK_HOST;
+    if (envHost && envHost !== '127.0.0.1') {
+      if (_lastRouterId !== '__env__') {
+        engine.configure({
+          host: envHost,
+          port: config.isp?.mikrotik?.port || process.env.ISP_MIKROTIK_PORT || 443,
+          username: config.isp?.mikrotik?.username || process.env.ISP_MIKROTIK_USER || 'admin',
+          password: config.isp?.mikrotik?.password || process.env.ISP_MIKROTIK_PASSWORD || '',
+          ssl: config.isp?.mikrotik?.ssl !== false
+        });
+        _lastRouterId = '__env__';
+      }
+      return { id: '__env__', host: envHost };
+    }
+
+    // No hay router configurado
+    throw new Error('No hay un router activo configurado. Configure un router en la pestaña Routers o defina las variables ISP_MIKROTIK_* en el archivo .env');
+  } catch (error) {
+    if (error.message.includes('No hay un router activo')) {
+      throw error;
+    }
+    // Si el error es de conexión BD, intentar con env vars como fallback
+    const envHost = config.isp?.mikrotik?.host || process.env.ISP_MIKROTIK_HOST;
+    if (envHost && envHost !== '127.0.0.1') {
+      if (_lastRouterId !== '__env__') {
+        engine.configure({
+          host: envHost,
+          port: config.isp?.mikrotik?.port || process.env.ISP_MIKROTIK_PORT || 443,
+          username: config.isp?.mikrotik?.username || process.env.ISP_MIKROTIK_USER || 'admin',
+          password: config.isp?.mikrotik?.password || process.env.ISP_MIKROTIK_PASSWORD || '',
+          ssl: config.isp?.mikrotik?.ssl !== false
+        });
+        _lastRouterId = '__env__';
+      }
+      return { id: '__env__', host: envHost };
+    }
+    throw new Error('No se pudo conectar con la base de datos y no hay configuración de router disponible');
+  }
+}
+
+// ============================================================
 // Controlador
 // ============================================================
 const ispController = {};
@@ -70,6 +139,7 @@ const ispController = {};
 
   ispController.getPPPProfiles = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const profiles = await engine.getPPPProfiles();
       res.json({ success: true, data: profiles });
     } catch (error) {
@@ -79,6 +149,7 @@ const ispController = {};
 
   ispController.createPPPProfile = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name, localAddress, remoteAddress, rateLimit, onlyOne, comment } = req.body;
       if (!name) {
         return res.status(400).json({ success: false, message: 'El nombre del perfil es requerido' });
@@ -106,6 +177,7 @@ const ispController = {};
 
   ispController.updatePPPProfile = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name } = req.params;
       const { localAddress, remoteAddress, rateLimit, onlyOne, comment } = req.body;
 
@@ -128,6 +200,7 @@ const ispController = {};
 
   ispController.deletePPPProfile = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name } = req.params;
       await engine.deletePPPProfile(name);
 
@@ -143,6 +216,7 @@ const ispController = {};
 
   ispController.getHotspotProfiles = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const profiles = await engine.getHotspotProfiles();
       res.json({ success: true, data: profiles });
     } catch (error) {
@@ -152,6 +226,7 @@ const ispController = {};
 
   ispController.createHotspotProfile = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name, sharedUsers, rateLimit, sessionTimeout, idleTimeout, keepaliveTimeout, comment } = req.body;
       if (!name) {
         return res.status(400).json({ success: false, message: 'El nombre del perfil es requerido' });
@@ -178,6 +253,7 @@ const ispController = {};
 
   ispController.deleteHotspotProfile = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name } = req.params;
       await engine.deleteHotspotProfile(name);
 
@@ -192,6 +268,7 @@ const ispController = {};
 
   ispController.updateHotspotProfile = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name } = req.params;
       const { sharedUsers, rateLimit, sessionTimeout, idleTimeout, keepaliveTimeout, comment } = req.body;
 
@@ -214,6 +291,7 @@ const ispController = {};
 
   ispController.getIPPools = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const pools = await engine.getIPPools();
       res.json({ success: true, data: pools });
     } catch (error) {
@@ -223,6 +301,7 @@ const ispController = {};
 
   ispController.createIPPool = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name, ranges, comment } = req.body;
       if (!name || !ranges) {
         return res.status(400).json({ success: false, message: 'Nombre y rangos son requeridos' });
@@ -247,6 +326,7 @@ const ispController = {};
 
   ispController.deleteIPPool = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name } = req.params;
       await engine.deleteIPPool(name);
 
@@ -261,6 +341,7 @@ const ispController = {};
 
   ispController.updateIPPool = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name } = req.params;
       const { ranges, comment } = req.body;
       if (!ranges) {
@@ -284,6 +365,7 @@ const ispController = {};
 
   ispController.getPPPSecrets = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const source = req.query.source || 'routeros';
       const search = req.query.search || null;
 
@@ -368,6 +450,7 @@ const ispController = {};
 
   ispController.createPPPSecret = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { username, password, service, profile, ipAddress, comment } = req.body;
       if (!username || !password) {
         return res.status(400).json({ success: false, message: 'Usuario y contraseña son requeridos' });
@@ -400,6 +483,7 @@ const ispController = {};
 
   ispController.updatePPPSecret = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { username } = req.params;
       const { password, service, profile, ipAddress, comment, disabled } = req.body;
 
@@ -434,6 +518,7 @@ const ispController = {};
 
   ispController.deletePPPSecret = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { username } = req.params;
       await engine.deletePPPSecret(username);
 
@@ -448,6 +533,7 @@ const ispController = {};
 
   ispController.enablePPPSecret = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { username } = req.params;
       await engine.enablePPPSecret(username);
 
@@ -462,6 +548,7 @@ const ispController = {};
 
   ispController.disablePPPSecret = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { username } = req.params;
       await engine.disablePPPSecret(username);
 
@@ -476,6 +563,7 @@ const ispController = {};
 
   ispController.getPPPActive = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const active = await engine.getPPPActive();
       res.json({ success: true, data: active });
     } catch (error) {
@@ -485,6 +573,7 @@ const ispController = {};
 
   ispController.getHotspotUsers = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const source = req.query.source || 'routeros';
       const search = req.query.search || null;
 
@@ -513,6 +602,7 @@ const ispController = {};
 
   ispController.createHotspotUser = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name, password, profile, server, limitUptime, limitBytes, comment } = req.body;
       if (!name) {
         return res.status(400).json({ success: false, message: 'Nombre de usuario requerido' });
@@ -539,6 +629,7 @@ const ispController = {};
 
   ispController.deleteHotspotUser = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name } = req.params;
       await engine.deleteHotspotUser(name);
 
@@ -553,6 +644,7 @@ const ispController = {};
 
   ispController.updateHotspotUser = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { name } = req.params;
       const { password, profile, server, limitUptime, limitBytes, comment } = req.body;
 
@@ -575,6 +667,7 @@ const ispController = {};
 
   ispController.getHotspotActive = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const active = await engine.getHotspotActive();
       res.json({ success: true, data: active });
     } catch (error) {
@@ -584,6 +677,7 @@ const ispController = {};
 
   ispController.getHotspotServers = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const servers = await engine.getHotspotServers();
       res.json({ success: true, data: servers });
     } catch (error) {
@@ -593,6 +687,7 @@ const ispController = {};
 
   ispController.getSystemInfo = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const [resource, identity, interfaces] = await Promise.all([
         engine.getSystemResource(),
         engine.getIdentity(),
@@ -622,6 +717,7 @@ const ispController = {};
 
   ispController.getInterfaces = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const interfaces = await engine.getInterfaces();
       res.json({ success: true, data: interfaces });
     } catch (error) {
@@ -631,6 +727,7 @@ const ispController = {};
 
   ispController.getDHCPLeases = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const leases = await engine.getDHCPLeases();
       res.json({ success: true, data: leases });
     } catch (error) {
@@ -640,6 +737,7 @@ const ispController = {};
 
   ispController.getFirewallRules = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const rules = await engine.getFirewallRules();
       res.json({ success: true, data: rules });
     } catch (error) {
@@ -649,6 +747,7 @@ const ispController = {};
 
   ispController.getStats = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const [routerStats, pool] = await Promise.all([
         engine.getStats(),
         getIspPool()
@@ -836,6 +935,7 @@ const ispController = {};
 
   ispController.syncPPPProfiles = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const profiles = await engine.getPPPProfiles();
       const pool = getIspPool();
       let imported = 0;
@@ -886,6 +986,7 @@ const ispController = {};
 
   ispController.syncHotspotProfiles = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const profiles = await engine.getHotspotProfiles();
       const pool = getIspPool();
       let imported = 0;
@@ -933,6 +1034,7 @@ const ispController = {};
 
   ispController.syncIPPools = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const pools = await engine.getIPPools();
       const pool = getIspPool();
       let imported = 0;
@@ -1059,6 +1161,7 @@ const ispController = {};
 
   ispController.syncPPPSecrets = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const secrets = await engine.getPPPSecrets();
       const pool = getIspPool();
       let imported = 0;
@@ -1109,6 +1212,7 @@ const ispController = {};
 
   ispController.syncHotspotUsers = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const users = await engine.getHotspotUsers();
       const pool = getIspPool();
       let imported = 0;
@@ -1157,6 +1261,7 @@ const ispController = {};
 
   ispController.syncOneClient = async function(req, res) {
     try {
+      await _ensureRouterConfigured();
       const { username } = req.params;
       const service = req.body?.service || 'pppoe';
       const pool = getIspPool();
@@ -1188,7 +1293,7 @@ const ispController = {};
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 
   ispController.getRouters = async function(req, res) {
     try {
@@ -1200,7 +1305,7 @@ const ispController = {};
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 
   ispController.addRouter = async function(req, res) {
     try {
@@ -1244,7 +1349,7 @@ const ispController = {};
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 
   ispController.updateRouter = async function(req, res) {
     try {
@@ -1280,7 +1385,7 @@ const ispController = {};
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 
   ispController.deleteRouter = async function(req, res) {
     try {
@@ -1294,7 +1399,7 @@ const ispController = {};
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 
   ispController.testRouterConnection = async function(req, res) {
     try {
@@ -1324,7 +1429,7 @@ const ispController = {};
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 
   ispController.setActiveRouter = async function(req, res) {
     try {
@@ -1350,12 +1455,13 @@ const ispController = {};
         password: router.password,
         ssl: !!router.ssl
       });
+      _lastRouterId = router.id;
 
       res.json({ success: true, message: `Router ${router.name} activado como principal` });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 
   ispController.scanNetwork = async function(req, res) {
     try {
@@ -1404,7 +1510,7 @@ const ispController = {};
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 
   ispController.scanHost = async function(req, res) {
     try {
@@ -1418,7 +1524,7 @@ const ispController = {};
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 
   ispController.getActiveRouter = async function(req, res) {
     try {
@@ -1446,7 +1552,7 @@ const ispController = {};
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 
 
 module.exports = ispController;
