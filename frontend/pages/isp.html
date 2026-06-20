@@ -50,6 +50,9 @@
     <button class="tab-btn" data-tab="pools" onclick="ISP.switchTab('pools')">
       📦 IP Pools
     </button>
+    <button class="tab-btn" data-tab="clients" onclick="ISP.switchTab('clients')">
+      👥 Clientes
+    </button>
     <button class="tab-btn" data-tab="plans" onclick="ISP.switchTab('plans')">
       💰 Planes
     </button>
@@ -151,6 +154,60 @@
           <tr><td colspan="4" class="text-center">Cargando...</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- TAB: Clientes -->
+  <div class="tab-content" id="tab-clients">
+    <div class="section-header">
+      <h2>Gestión de Clientes</h2>
+      <div class="section-actions">
+        <div class="search-box">
+          <input type="text" id="client-search-input" class="form-control" placeholder="Buscar cliente..." onkeyup="ISP.searchClients(event)">
+        </div>
+        <select id="client-service-filter" class="form-control" onchange="ISP.loadClients()" style="width:auto;">
+          <option value="all">Todos los servicios</option>
+          <option value="pppoe">PPPoE</option>
+          <option value="hotspot">Hotspot</option>
+          <option value="vpn">VPN</option>
+        </select>
+        <select id="client-status-filter" class="form-control" onchange="ISP.loadClients()" style="width:auto;">
+          <option value="all">Todos los estados</option>
+          <option value="active">Activos</option>
+          <option value="disabled">Deshabilitados</option>
+        </select>
+        <button class="btn btn-sm btn-outline" onclick="ISP.syncClients()">
+          <span>🔄</span> Sincronizar
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="ISP.showCreateClientModal()">
+          <span>➕</span> Nuevo Cliente
+        </button>
+      </div>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Servicio</th>
+            <th>Perfil</th>
+            <th>IP Address</th>
+            <th>Plan</th>
+            <th>Estado</th>
+            <th>Sync</th>
+            <th>Comentario</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="isp-clients-body">
+          <tr><td colspan="9" class="text-center">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="isp-clients-pagination" style="display:none;">
+      <button class="btn btn-sm btn-outline" onclick="ISP.prevPage()">◀ Anterior</button>
+      <span id="isp-clients-page-info">Página 1</span>
+      <button class="btn btn-sm btn-outline" onclick="ISP.nextPage()">Siguiente ▶</button>
     </div>
   </div>
 
@@ -321,6 +378,73 @@
         </div>
         <div class="form-actions">
           <button type="button" class="btn btn-outline" onclick="ISP.closeModal('isp-pool-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para crear/editar cliente -->
+<div id="isp-client-modal" class="modal" style="display:none;">
+  <div class="modal-backdrop" onclick="ISP.closeModal('isp-client-modal')"></div>
+  <div class="modal-content modal-sm">
+    <div class="modal-header">
+      <h3 id="isp-client-modal-title">Nuevo Cliente</h3>
+      <button class="modal-close" onclick="ISP.closeModal('isp-client-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="isp-client-form" onsubmit="ISP.saveClient(event)">
+        <input type="hidden" id="client-edit-mode" value="0">
+        <input type="hidden" id="client-original-username" value="">
+        <div class="form-group">
+          <label>Usuario</label>
+          <input type="text" id="client-username" class="form-control" required placeholder="ej: cliente01">
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="text" id="client-password" class="form-control" required placeholder="Contraseña">
+        </div>
+        <div class="form-group">
+          <label>Servicio</label>
+          <select id="client-service" class="form-control" onchange="ISP.toggleClientFields()">
+            <option value="pppoe">PPPoE</option>
+            <option value="hotspot">Hotspot</option>
+            <option value="vpn">VPN</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Perfil / Plan</label>
+          <select id="client-profile" class="form-control">
+            <option value="">Seleccionar perfil...</option>
+          </select>
+        </div>
+        <div id="client-pppoe-fields">
+          <div class="form-group">
+            <label>IP Address</label>
+            <input type="text" id="client-ip-address" class="form-control" placeholder="ej: 192.168.88.100">
+          </div>
+        </div>
+        <div id="client-hotspot-fields" style="display:none;">
+          <div class="form-group">
+            <label>Servidor Hotspot</label>
+            <input type="text" id="client-hotspot-server" class="form-control" placeholder="ej: hotspot1">
+          </div>
+          <div class="form-group">
+            <label>Límite de Tiempo</label>
+            <input type="text" id="client-limit-uptime" class="form-control" placeholder="ej: 1d">
+          </div>
+          <div class="form-group">
+            <label>Límite de Bytes</label>
+            <input type="text" id="client-limit-bytes" class="form-control" placeholder="ej: 1G">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Comentario</label>
+          <input type="text" id="client-comment" class="form-control" placeholder="Comentario opcional">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" onclick="ISP.closeModal('isp-client-modal')">Cancelar</button>
           <button type="submit" class="btn btn-primary">Guardar</button>
         </div>
       </form>

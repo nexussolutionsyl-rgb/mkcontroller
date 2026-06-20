@@ -4,6 +4,10 @@
  */
 const ISP = {
   currentTab: 'ppp-profiles',
+  clientsPage: 0,
+  clientsPageSize: 50,
+  clientsTotal: 0,
+  clientsData: [],
 
   /**
    * Inicializa la página
@@ -17,6 +21,7 @@ const ISP = {
     await this.loadPlans();
     await this.loadSystemInfo();
     await this.loadInterfaces();
+    await this.loadClients();
   },
 
   /**
@@ -31,6 +36,7 @@ const ISP = {
     await this.loadPlans();
     await this.loadSystemInfo();
     await this.loadInterfaces();
+    await this.loadClients();
     document.getElementById('isp-stats').classList.remove('loading');
     App.toast('Datos actualizados', 'success');
   },
@@ -232,6 +238,313 @@ const ISP = {
     } catch (error) {
       document.getElementById('isp-interfaces-body').innerHTML = 
         `<tr><td colspan="5" class="text-center error">Error: ${error.message}</td></tr>`;
+    }
+  },
+
+  // ==========================================================
+  // CLIENTES
+  // ==========================================================
+
+  async loadClients() {
+    try {
+      const service = document.getElementById('client-service-filter')?.value || 'all';
+      const status = document.getElementById('client-status-filter')?.value || 'all';
+      const search = document.getElementById('client-search-input')?.value || '';
+
+      let endpoint = '/isp/clients/db?';
+      const params = [];
+      if (service !== 'all') params.push(`service=${service}`);
+      if (status === 'active') params.push('disabled=0');
+      else if (status === 'disabled') params.push('disabled=1');
+      if (search) params.push(`search=${encodeURIComponent(search)}`);
+      params.push(`limit=${this.clientsPageSize}`);
+      params.push(`offset=${this.clientsPage * this.clientsPageSize}`);
+      endpoint += params.join('&');
+
+      const result = await API.get(endpoint);
+      const tbody = document.getElementById('isp-clients-body');
+      const pagination = document.getElementById('isp-clients-pagination');
+      const pageInfo = document.getElementById('isp-clients-page-info');
+
+      if (result.success && result.data) {
+        this.clientsData = result.data;
+        this.clientsTotal = result.pagination?.total || result.data.length;
+
+        if (result.data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center">Sin clientes registrados</td></tr>';
+          pagination.style.display = 'none';
+          return;
+        }
+
+        tbody.innerHTML = result.data.map(c => `
+          <tr>
+            <td><strong>${c.username || 'N/A'}</strong></td>
+            <td><span class="badge badge-${c.service}">${c.service || '-'}</span></td>
+            <td>${c.profile || '-'}</td>
+            <td>${c.ip_address || '-'}</td>
+            <td>${c.plan_id ? c.plan_id.substring(0, 8) + '...' : '-'}</td>
+            <td>
+              <span class="status-indicator ${c.disabled == 0 ? 'online' : 'offline'}">
+                ${c.disabled == 0 ? '🟢 Activo' : '🔴 Deshabilitado'}
+              </span>
+            </td>
+            <td>
+              <span class="badge badge-${c.sync_status}">${c.sync_status}</span>
+            </td>
+            <td>${c.comment || '-'}</td>
+            <td class="actions-cell">
+              <button class="btn btn-sm btn-outline" onclick="ISP.editClient('${c.username}', '${c.service}')" title="Editar">✏️</button>
+              ${c.disabled == 0
+                ? `<button class="btn btn-sm btn-warning" onclick="ISP.toggleClientStatus('${c.username}', '${c.service}', 'disable')" title="Deshabilitar">🔌</button>`
+                : `<button class="btn btn-sm btn-success" onclick="ISP.toggleClientStatus('${c.username}', '${c.service}', 'enable')" title="Habilitar">✅</button>`
+              }
+              <button class="btn btn-sm btn-outline" onclick="ISP.syncOneClient('${c.username}', '${c.service}')" title="Sincronizar">🔄</button>
+              <button class="btn btn-sm btn-danger" onclick="ISP.confirmDeleteClient('${c.username}', '${c.service}')" title="Eliminar">🗑️</button>
+            </td>
+          </tr>
+        `).join('');
+
+        // Paginación
+        const totalPages = Math.ceil(this.clientsTotal / this.clientsPageSize);
+        if (totalPages > 1) {
+          pagination.style.display = 'flex';
+          pageInfo.textContent = `Página ${this.clientsPage + 1} de ${totalPages} (${this.clientsTotal} total)`;
+        } else {
+          pagination.style.display = 'none';
+        }
+      } else {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center error">Error al cargar clientes</td></tr>';
+      }
+    } catch (error) {
+      document.getElementById('isp-clients-body').innerHTML =
+        `<tr><td colspan="9" class="text-center error">Error: ${error.message}</td></tr>`;
+    }
+  },
+
+  searchClients(event) {
+    if (event.key === 'Enter') {
+      this.clientsPage = 0;
+      this.loadClients();
+    }
+  },
+
+  prevPage() {
+    if (this.clientsPage > 0) {
+      this.clientsPage--;
+      this.loadClients();
+    }
+  },
+
+  nextPage() {
+    const totalPages = Math.ceil(this.clientsTotal / this.clientsPageSize);
+    if (this.clientsPage < totalPages - 1) {
+      this.clientsPage++;
+      this.loadClients();
+    }
+  },
+
+  async syncClients() {
+    const service = document.getElementById('client-service-filter')?.value || 'all';
+    try {
+      App.toast('Sincronizando clientes...', 'info');
+      let result;
+      if (service === 'hotspot') {
+        result = await API.post('/isp/hotspot/users/sync');
+      } else {
+        result = await API.post('/isp/clients/sync');
+      }
+      if (result.success) {
+        App.toast(result.message, 'success');
+        await this.loadClients();
+        await this.loadStats();
+      } else {
+        App.toast(result.message || 'Error en sincronización', 'error');
+      }
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
+    }
+  },
+
+  async syncOneClient(username, service) {
+    try {
+      App.toast(`Sincronizando ${username}...`, 'info');
+      const result = await API.post(`/isp/clients/${encodeURIComponent(username)}/sync-one`, { service });
+      if (result.success) {
+        App.toast(`Cliente ${username} sincronizado`, 'success');
+        await this.loadClients();
+      } else {
+        App.toast(result.message || 'Error', 'error');
+      }
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
+    }
+  },
+
+  showCreateClientModal() {
+    document.getElementById('isp-client-modal-title').textContent = 'Nuevo Cliente';
+    document.getElementById('client-edit-mode').value = '0';
+    document.getElementById('client-original-username').value = '';
+    document.getElementById('isp-client-form').reset();
+    document.getElementById('client-password').required = true;
+    this.loadProfilesForSelect();
+    this.toggleClientFields();
+    document.getElementById('isp-client-modal').style.display = 'flex';
+  },
+
+  async editClient(username, service) {
+    document.getElementById('isp-client-modal-title').textContent = `Editar: ${username}`;
+    document.getElementById('client-edit-mode').value = '1';
+    document.getElementById('client-original-username').value = username;
+    document.getElementById('client-username').value = username;
+    document.getElementById('client-username').readOnly = true;
+    document.getElementById('client-password').required = false;
+
+    // Cargar datos del cliente desde BD
+    try {
+      const result = await API.get(`/isp/clients/db?search=${encodeURIComponent(username)}&limit=1`);
+      if (result.success && result.data && result.data.length > 0) {
+        const c = result.data[0];
+        document.getElementById('client-service').value = c.service || 'pppoe';
+        document.getElementById('client-ip-address').value = c.ip_address || '';
+        document.getElementById('client-comment').value = c.comment || '';
+        document.getElementById('client-password').value = c.password || '';
+      }
+    } catch (e) {
+      console.error('Error cargando datos del cliente:', e);
+    }
+
+    this.loadProfilesForSelect(service);
+    this.toggleClientFields();
+    document.getElementById('isp-client-modal').style.display = 'flex';
+  },
+
+  async loadProfilesForSelect(serviceType) {
+    const select = document.getElementById('client-profile');
+    const service = serviceType || document.getElementById('client-service').value;
+    select.innerHTML = '<option value="">Seleccionar perfil...</option>';
+
+    try {
+      const result = await API.get(`/isp/plans?service=${service}`);
+      if (result.success && result.data) {
+        result.data.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.routeros_name || p.name;
+          opt.textContent = `${p.name}${p.speed_limit ? ' (' + p.speed_limit + ')' : ''}`;
+          select.appendChild(opt);
+        });
+      }
+    } catch (e) {
+      console.error('Error cargando perfiles:', e);
+    }
+  },
+
+  toggleClientFields() {
+    const service = document.getElementById('client-service').value;
+    document.getElementById('client-pppoe-fields').style.display = service === 'pppoe' ? 'block' : 'none';
+    document.getElementById('client-hotspot-fields').style.display = service === 'hotspot' ? 'block' : 'none';
+    this.loadProfilesForSelect(service);
+  },
+
+  async saveClient(event) {
+    event.preventDefault();
+    const isEdit = document.getElementById('client-edit-mode').value === '1';
+    const username = document.getElementById('client-username').value;
+    const password = document.getElementById('client-password').value;
+    const service = document.getElementById('client-service').value;
+    const profile = document.getElementById('client-profile').value;
+    const ipAddress = document.getElementById('client-ip-address').value;
+    const comment = document.getElementById('client-comment').value;
+
+    try {
+      let result;
+      if (isEdit) {
+        const originalUsername = document.getElementById('client-original-username').value;
+        const data = { service, profile: profile || undefined, comment: comment || undefined };
+        if (password) data.password = password;
+        if (ipAddress) data.ipAddress = ipAddress;
+
+        if (service === 'hotspot') {
+          data.server = document.getElementById('client-hotspot-server').value || undefined;
+          data.limitUptime = document.getElementById('client-limit-uptime').value || undefined;
+          data.limitBytes = document.getElementById('client-limit-bytes').value || undefined;
+          result = await API.put(`/isp/hotspot/users/${encodeURIComponent(originalUsername)}`, data);
+        } else {
+          result = await API.put(`/isp/clients/${encodeURIComponent(originalUsername)}`, data);
+        }
+      } else {
+        const data = { username, password, service, profile: profile || undefined, comment: comment || undefined };
+        if (ipAddress) data.ipAddress = ipAddress;
+
+        if (service === 'hotspot') {
+          data.server = document.getElementById('client-hotspot-server').value || undefined;
+          data.limitUptime = document.getElementById('client-limit-uptime').value || undefined;
+          data.limitBytes = document.getElementById('client-limit-bytes').value || undefined;
+          result = await API.post('/isp/hotspot/users', data);
+        } else {
+          result = await API.post('/isp/clients', data);
+        }
+      }
+
+      if (result.success) {
+        App.toast(isEdit ? `Cliente ${username} actualizado` : `Cliente ${username} creado`, 'success');
+        this.closeModal('isp-client-modal');
+        await this.loadClients();
+        await this.loadStats();
+      } else {
+        App.toast(result.message || 'Error al guardar cliente', 'error');
+      }
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
+    }
+  },
+
+  async toggleClientStatus(username, service, action) {
+    const actionText = action === 'enable' ? 'habilitar' : 'deshabilitar';
+    if (!confirm(`¿${actionText} al cliente "${username}"?`)) return;
+
+    try {
+      const endpoint = action === 'enable' ? 'enable' : 'disable';
+      let result;
+      if (service === 'hotspot') {
+        // Hotspot enable/disable via update
+        result = await API.put(`/isp/hotspot/users/${encodeURIComponent(username)}`, {
+          disabled: action === 'disable'
+        });
+      } else {
+        result = await API.post(`/isp/clients/${encodeURIComponent(username)}/${endpoint}`);
+      }
+
+      if (result.success) {
+        App.toast(`Cliente ${username} ${actionText}do`, 'success');
+        await this.loadClients();
+      } else {
+        App.toast(result.message || 'Error', 'error');
+      }
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
+    }
+  },
+
+  async confirmDeleteClient(username, service) {
+    if (!confirm(`¿Eliminar al cliente "${username}"? Esta acción no se puede deshacer.`)) return;
+
+    try {
+      let result;
+      if (service === 'hotspot') {
+        result = await API.delete(`/isp/hotspot/users/${encodeURIComponent(username)}`);
+      } else {
+        result = await API.delete(`/isp/clients/${encodeURIComponent(username)}`);
+      }
+
+      if (result.success) {
+        App.toast(`Cliente ${username} eliminado`, 'success');
+        await this.loadClients();
+        await this.loadStats();
+      } else {
+        App.toast(result.message || 'Error al eliminar', 'error');
+      }
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
     }
   },
 

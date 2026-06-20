@@ -61,9 +61,16 @@ router.put('/clients/:username', authenticate, ispController.updatePPPSecret);
 router.delete('/clients/:username', authenticate, ispController.deletePPPSecret);
 router.post('/clients/:username/enable', authenticate, ispController.enablePPPSecret);
 router.post('/clients/:username/disable', authenticate, ispController.disablePPPSecret);
+router.post('/clients/:username/sync-one', authenticate, ispController.syncOneClient);
 
 // Sesiones activas PPP
 router.get('/clients/active', authenticate, ispController.getPPPActive);
+
+// Clientes desde BD local
+router.get('/clients/db', authenticate, ispController.getClientsFromDB);
+
+// Sincronización masiva de clientes
+router.post('/clients/sync', authenticate, ispController.syncPPPSecrets);
 
 // ============================================================
 // Hotspot Users (protegidas)
@@ -76,6 +83,9 @@ router.delete('/hotspot/users/:name', authenticate, ispController.deleteHotspotU
 // Hotspot activos y servidores
 router.get('/hotspot/active', authenticate, ispController.getHotspotActive);
 router.get('/hotspot/servers', authenticate, ispController.getHotspotServers);
+
+// Sincronización masiva de usuarios Hotspot
+router.post('/hotspot/users/sync', authenticate, ispController.syncHotspotUsers);
 
 // ============================================================
 // Sistema e Interfaces (protegidas)

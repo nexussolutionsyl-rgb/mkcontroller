@@ -355,12 +355,92 @@ const ispController = {
 
   /**
    * GET /api/isp/clients
-   * Obtener clientes PPP desde RouterOS
+   * Obtener clientes PPP desde RouterOS o desde BD local
+   * Query params: ?source=routeros (default) | ?source=db | ?search=text
    */
   async getPPPSecrets(req, res) {
     try {
+      const source = req.query.source || 'routeros';
+      const search = req.query.search || null;
+
+      if (source === 'db') {
+        return await this.getClientsFromDB(req, res);
+      }
+
       const secrets = await engine.getPPPSecrets();
-      res.json({ success: true, data: secrets });
+
+      // Si hay búsqueda, filtrar del lado servidor
+      if (search) {
+        const term = search.toLowerCase();
+        const filtered = secrets.filter(s =>
+          (s.name && s.name.toLowerCase().includes(term)) ||
+          (s.comment && s.comment.toLowerCase().includes(term)) ||
+          (s.profile && s.profile.toLowerCase().includes(term)) ||
+          (s['remote-address'] && s['remote-address'].includes(term))
+        );
+        return res.json({ success: true, data: filtered, source: 'routeros', filtered: true });
+      }
+
+      res.json({ success: true, data: secrets, source: 'routeros' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  /**
+   * GET /api/isp/clients/db
+   * Obtener clientes desde la BD local con filtros
+   */
+  async getClientsFromDB(req, res) {
+    try {
+      const pool = getIspPool();
+      const { service, disabled, search, plan_id, limit, offset } = req.query;
+
+      let query = 'SELECT * FROM isp_clients WHERE 1=1';
+      const params = [];
+
+      if (service) {
+        query += ' AND service = ?';
+        params.push(service);
+      }
+      if (disabled !== undefined) {
+        query += ' AND disabled = ?';
+        params.push(disabled === '1' ? 1 : 0);
+      }
+      if (plan_id) {
+        query += ' AND plan_id = ?';
+        params.push(plan_id);
+      }
+      if (search) {
+        query += ' AND (username LIKE ? OR comment LIKE ? OR profile LIKE ? OR ip_address LIKE ?)';
+        const term = `%${search}%`;
+        params.push(term, term, term, term);
+      }
+
+      // Total count
+      const [countResult] = await pool.execute(
+        query.replace('SELECT *', 'SELECT COUNT(*) as total'),
+        params
+      );
+
+      query += ' ORDER BY created_at DESC';
+      const lim = parseInt(limit) || 100;
+      const off = parseInt(offset) || 0;
+      query += ' LIMIT ? OFFSET ?';
+      params.push(lim, off);
+
+      const [rows] = await pool.execute(query, params);
+
+      res.json({
+        success: true,
+        data: rows,
+        source: 'db',
+        pagination: {
+          total: countResult[0].total,
+          limit: lim,
+          offset: off
+        }
+      });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
@@ -513,12 +593,32 @@ const ispController = {
 
   /**
    * GET /api/isp/hotspot/users
-   * Obtener usuarios Hotspot desde RouterOS
+   * Obtener usuarios Hotspot desde RouterOS o BD
+   * Query params: ?source=routeros (default) | ?source=db | ?search=text
    */
   async getHotspotUsers(req, res) {
     try {
+      const source = req.query.source || 'routeros';
+      const search = req.query.search || null;
+
+      if (source === 'db') {
+        return await this.getClientsFromDB(req, res);
+      }
+
       const users = await engine.getHotspotUsers();
-      res.json({ success: true, data: users });
+
+      if (search) {
+        const term = search.toLowerCase();
+        const filtered = users.filter(u =>
+          (u.name && u.name.toLowerCase().includes(term)) ||
+          (u.comment && u.comment.toLowerCase().includes(term)) ||
+          (u.profile && u.profile.toLowerCase().includes(term)) ||
+          (u.server && u.server.toLowerCase().includes(term))
+        );
+        return res.json({ success: true, data: filtered, source: 'routeros', filtered: true });
+      }
+
+      res.json({ success: true, data: users, source: 'routeros' });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
@@ -1170,6 +1270,155 @@ const ispController = {
       const pool = getIspPool();
       await pool.execute(`DELETE FROM isp_plans WHERE id = ?`, [id]);
       res.json({ success: true, message: 'Plan eliminado' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  // ==========================================================
+  // SINCRONIZACIÓN DE CLIENTES
+  // ==========================================================
+
+  /**
+   * POST /api/isp/clients/sync
+   * Importar todos los PPP secrets desde RouterOS a la BD local
+   */
+  async syncPPPSecrets(req, res) {
+    try {
+      const secrets = await engine.getPPPSecrets();
+      const pool = getIspPool();
+      let imported = 0;
+      let updated = 0;
+
+      for (const secret of secrets) {
+        const username = secret.name;
+        if (!username) continue;
+
+        const [existing] = await pool.execute(
+          `SELECT id FROM isp_clients WHERE username = ? AND service = 'pppoe'`,
+          [username]
+        );
+
+        const password = secret.password || '';
+        const profile = secret.profile || 'default';
+        const service = secret.service || 'pppoe';
+        const ipAddress = secret['remote-address'] || null;
+        const disabled = secret.disabled === 'true' ? 1 : 0;
+        const comment = secret.comment || null;
+
+        if (existing.length > 0) {
+          await pool.execute(
+            `UPDATE isp_clients SET password = ?, profile = ?, ip_address = ?, disabled = ?, comment = ?, sync_status = 'synced', last_sync_at = NOW() WHERE username = ? AND service = 'pppoe'`,
+            [password, profile, ipAddress, disabled, comment, username]
+          );
+          updated++;
+        } else {
+          const id = uuidv4();
+          await pool.execute(
+            `INSERT INTO isp_clients (id, username, password, service, profile, ip_address, disabled, sync_status, comment, last_sync_at)
+             VALUES (?, ?, ?, 'pppoe', ?, ?, ?, 'synced', ?, NOW())`,
+            [id, username, password, profile, ipAddress, disabled, comment]
+          );
+          imported++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Sincronización PPP completada: ${imported} importados, ${updated} actualizados`,
+        data: { imported, updated, total: secrets.length }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  /**
+   * POST /api/isp/hotspot/users/sync
+   * Importar usuarios Hotspot desde RouterOS a la BD local
+   */
+  async syncHotspotUsers(req, res) {
+    try {
+      const users = await engine.getHotspotUsers();
+      const pool = getIspPool();
+      let imported = 0;
+      let updated = 0;
+
+      for (const user of users) {
+        const username = user.name;
+        if (!username) continue;
+
+        const [existing] = await pool.execute(
+          `SELECT id FROM isp_clients WHERE username = ? AND service = 'hotspot'`,
+          [username]
+        );
+
+        const password = user.password || username;
+        const profile = user.profile || null;
+        const disabled = user.disabled === 'true' ? 1 : 0;
+        const comment = user.comment || null;
+
+        if (existing.length > 0) {
+          await pool.execute(
+            `UPDATE isp_clients SET password = ?, profile = ?, disabled = ?, comment = ?, sync_status = 'synced', last_sync_at = NOW() WHERE username = ? AND service = 'hotspot'`,
+            [password, profile, disabled, comment, username]
+          );
+          updated++;
+        } else {
+          const id = uuidv4();
+          await pool.execute(
+            `INSERT INTO isp_clients (id, username, password, service, profile, disabled, sync_status, comment, last_sync_at)
+             VALUES (?, ?, ?, 'hotspot', ?, ?, 'synced', ?, NOW())`,
+            [id, username, password, profile, disabled, comment]
+          );
+          imported++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Sincronización Hotspot completada: ${imported} importados, ${updated} actualizados`,
+        data: { imported, updated, total: users.length }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  /**
+   * POST /api/isp/clients/:username/sync-one
+   * Sincronizar un cliente específico desde RouterOS a BD
+   */
+  async syncOneClient(req, res) {
+    try {
+      const { username } = req.params;
+      const { service } = req.body || 'pppoe';
+      const pool = getIspPool();
+
+      let clientData;
+      if (service === 'hotspot') {
+        const users = await engine.getHotspotUsers();
+        clientData = users.find(u => u.name === username);
+        if (!clientData) {
+          return res.status(404).json({ success: false, message: `Usuario Hotspot ${username} no encontrado en RouterOS` });
+        }
+        await pool.execute(
+          `UPDATE isp_clients SET password = ?, profile = ?, disabled = ?, comment = ?, sync_status = 'synced', last_sync_at = NOW() WHERE username = ? AND service = 'hotspot'`,
+          [clientData.password || username, clientData.profile || null, clientData.disabled === 'true' ? 1 : 0, clientData.comment || null, username]
+        );
+      } else {
+        const secrets = await engine.getPPPSecrets();
+        clientData = secrets.find(s => s.name === username);
+        if (!clientData) {
+          return res.status(404).json({ success: false, message: `Cliente PPP ${username} no encontrado en RouterOS` });
+        }
+        await pool.execute(
+          `UPDATE isp_clients SET password = ?, profile = ?, ip_address = ?, disabled = ?, comment = ?, sync_status = 'synced', last_sync_at = NOW() WHERE username = ? AND service = 'pppoe'`,
+          [clientData.password || '', clientData.profile || 'default', clientData['remote-address'] || null, clientData.disabled === 'true' ? 1 : 0, clientData.comment || null, username]
+        );
+      }
+
+      res.json({ success: true, message: `Cliente ${username} sincronizado` });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
