@@ -233,6 +233,32 @@ const ispController = {
     }
   },
 
+  /**
+   * PUT /api/isp/hotspot/profiles/:name
+   * Actualizar un perfil Hotspot
+   */
+  async updateHotspotProfile(req, res) {
+    try {
+      const { name } = req.params;
+      const { sharedUsers, rateLimit, sessionTimeout, idleTimeout, keepaliveTimeout, comment } = req.body;
+
+      const result = await engine.updateHotspotProfile(name, {
+        sharedUsers, rateLimit, sessionTimeout, idleTimeout, keepaliveTimeout, comment
+      });
+
+      // Actualizar en BD
+      const pool = getIspPool();
+      await pool.execute(
+        `UPDATE isp_plans SET speed_limit = ?, shared_users = ?, comment = ?, sync_status = 'synced' WHERE routeros_name = ? AND service = 'hotspot'`,
+        [rateLimit || null, sharedUsers || 1, comment || null, name]
+      );
+
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
   // ==========================================================
   // IP POOLS
   // ==========================================================
@@ -291,6 +317,33 @@ const ispController = {
       await pool.execute(`DELETE FROM isp_ip_pools WHERE name = ?`, [name]);
 
       res.json({ success: true, message: `Pool ${name} eliminado` });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  /**
+   * PUT /api/isp/pools/:name
+   * Actualizar un IP Pool
+   */
+  async updateIPPool(req, res) {
+    try {
+      const { name } = req.params;
+      const { ranges, comment } = req.body;
+      if (!ranges) {
+        return res.status(400).json({ success: false, message: 'Los rangos son requeridos' });
+      }
+
+      const result = await engine.updateIPPool(name, { ranges, comment });
+
+      // Actualizar en BD
+      const pool = getIspPool();
+      await pool.execute(
+        `UPDATE isp_ip_pools SET ranges = ?, comment = ?, sync_status = 'synced' WHERE name = ?`,
+        [ranges, comment || null, name]
+      );
+
+      res.json({ success: true, data: result });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
@@ -514,6 +567,32 @@ const ispController = {
       await pool.execute(`DELETE FROM isp_clients WHERE username = ? AND service = 'hotspot'`, [name]);
 
       res.json({ success: true, message: `Usuario ${name} eliminado` });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  /**
+   * PUT /api/isp/hotspot/users/:name
+   * Actualizar un usuario Hotspot
+   */
+  async updateHotspotUser(req, res) {
+    try {
+      const { name } = req.params;
+      const { password, profile, server, limitUptime, limitBytes, comment } = req.body;
+
+      const result = await engine.updateHotspotUser(name, {
+        password, profile, server, limitUptime, limitBytes, comment
+      });
+
+      // Actualizar en BD
+      const pool = getIspPool();
+      await pool.execute(
+        `UPDATE isp_clients SET profile = ?, comment = ?, sync_status = 'synced' WHERE username = ? AND service = 'hotspot'`,
+        [profile || null, comment || null, name]
+      );
+
+      res.json({ success: true, data: result });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
