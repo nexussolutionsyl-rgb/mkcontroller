@@ -56,8 +56,11 @@
     <button class="tab-btn" data-tab="plans" onclick="ISP.switchTab('plans')">
       💰 Planes
     </button>
+    <button class="tab-btn" data-tab="routers" onclick="ISP.switchTab('routers')">
+      🖥️ Routers
+    </button>
     <button class="tab-btn" data-tab="system" onclick="ISP.switchTab('system')">
-      🖥️ Sistema
+      ⚙️ Sistema
     </button>
   </div>
 
@@ -237,6 +240,45 @@
         </thead>
         <tbody id="isp-plans-body">
           <tr><td colspan="8" class="text-center">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: Routers -->
+  <div class="tab-content" id="tab-routers">
+    <div class="section-header">
+      <h2>Gestión de Routers</h2>
+      <div class="section-actions">
+        <button class="btn btn-primary" onclick="ISP.showAddRouterModal()">
+          ➕ Agregar Router
+        </button>
+        <button class="btn btn-secondary" onclick="ISP.showScanModal()">
+          🔍 Escanear Red
+        </button>
+        <button class="btn btn-outline" onclick="ISP.loadRouters()">
+          🔄 Refrescar
+        </button>
+      </div>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Nombre</th>
+            <th>Host / IP</th>
+            <th>Puerto</th>
+            <th>Identidad</th>
+            <th>Versión</th>
+            <th>Método</th>
+            <th>Activo</th>
+            <th>Última Conexión</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="isp-routers-table-body">
+          <tr><td colspan="10" class="text-center">Cargando routers...</td></tr>
         </tbody>
       </table>
     </div>
@@ -499,6 +541,101 @@
           <button type="submit" class="btn btn-primary">Guardar</button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para agregar router -->
+<div id="isp-router-modal" class="modal" style="display:none;">
+  <div class="modal-backdrop" onclick="ISP.closeModal('isp-router-modal')"></div>
+  <div class="modal-content modal-sm">
+    <div class="modal-header">
+      <h3 id="router-modal-title">Agregar Router</h3>
+      <button class="modal-close" onclick="ISP.closeModal('isp-router-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="isp-router-form" onsubmit="ISP.saveRouter(event)">
+        <input type="hidden" id="router-id" value="">
+        <div class="form-group">
+          <label>Nombre del Router *</label>
+          <input type="text" id="router-name" class="form-control" required placeholder="ej: Router Principal Oficina">
+        </div>
+        <div class="form-group">
+          <label>Host / IP / Dominio *</label>
+          <input type="text" id="router-host" class="form-control" required placeholder="ej: 192.168.88.1 o mikrotik.midominio.com">
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group">
+            <label>Puerto REST API</label>
+            <input type="number" id="router-port" class="form-control" value="443" placeholder="443">
+          </div>
+          <div class="form-group">
+            <label>Puerto API (opcional)</label>
+            <input type="number" id="router-api-port" class="form-control" placeholder="8728">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Usuario</label>
+          <input type="text" id="router-username" class="form-control" value="admin" placeholder="admin">
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="router-password" class="form-control" placeholder="Contraseña">
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="router-ssl" checked> Usar SSL (HTTPS)
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Comentario</label>
+          <input type="text" id="router-comment" class="form-control" placeholder="Ubicación, notas, etc.">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" onclick="ISP.closeModal('isp-router-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar y Probar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para escanear red -->
+<div id="isp-scan-modal" class="modal" style="display:none;">
+  <div class="modal-backdrop" onclick="ISP.closeModal('isp-scan-modal')"></div>
+  <div class="modal-content modal-sm">
+    <div class="modal-header">
+      <h3>Escanear Red Local</h3>
+      <button class="modal-close" onclick="ISP.closeModal('isp-scan-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="isp-scan-form" onsubmit="ISP.scanNetwork(event)">
+        <div class="form-group">
+          <label>Subred (CIDR) *</label>
+          <input type="text" id="scan-subnet" class="form-control" required placeholder="ej: 192.168.88.0/24" value="192.168.88.0/24">
+          <small style="color:#666;">Formato: IP/Bits. Ej: 192.168.1.0/24, 10.0.0.0/16</small>
+        </div>
+        <div class="form-group">
+          <label>Usuario (para autenticación)</label>
+          <input type="text" id="scan-username" class="form-control" value="admin" placeholder="admin">
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="scan-password" class="form-control" placeholder="Contraseña">
+        </div>
+        <div class="form-group">
+          <label>Timeout por host (ms)</label>
+          <input type="number" id="scan-timeout" class="form-control" value="3000" placeholder="3000">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" onclick="ISP.closeModal('isp-scan-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="scan-btn">🔍 Iniciar Escaneo</button>
+        </div>
+      </form>
+      <div id="scan-results" style="display:none;margin-top:15px;">
+        <h4>Resultados</h4>
+        <div id="scan-results-list"></div>
+      </div>
     </div>
   </div>
 </div>

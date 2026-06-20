@@ -19,6 +19,7 @@ const ISP = {
     await this.loadHotspotProfiles();
     await this.loadIPPools();
     await this.loadPlans();
+    await this.loadRouters();
     await this.loadSystemInfo();
     await this.loadInterfaces();
     await this.loadClients();
@@ -744,6 +745,219 @@ const ISP = {
       }
     } catch (error) {
       App.toast(`Error: ${error.message}`, 'error');
+    }
+  },
+
+  // ==========================================================
+  // GESTIÓN DE ROUTERS
+  // ==========================================================
+
+  /**
+   * Cargar lista de routers registrados
+   */
+  async loadRouters() {
+    try {
+      const res = await API.get('/isp/routers');
+      const tbody = document.getElementById('isp-routers-table-body');
+      if (!res.success) {
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center">Error: ${res.message}</td></tr>`;
+        return;
+      }
+      if (!res.data || res.data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center">No hay routers registrados. Agrega uno o escanea la red.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = res.data.map(r => `
+        <tr>
+          <td>${r.is_online ? '<span class="badge badge-success">🟢 Online</span>' : '<span class="badge badge-danger">🔴 Offline</span>'}</td>
+          <td><strong>${r.name}</strong></td>
+          <td>${r.host}</td>
+          <td>${r.port}</td>
+          <td>${r.identity || '-'}</td>
+          <td>${r.version || '-'}</td>
+          <td><span class="badge badge-info">${r.discovery_method}</span></td>
+          <td>${r.is_active ? '<span class="badge badge-primary">✅ Activo</span>' : '<button class="btn btn-sm btn-outline" onclick="ISP.activateRouter(\'' + r.id + '\')">Activar</button>'}</td>
+          <td>${r.last_connected_at ? new Date(r.last_connected_at).toLocaleString('es-ES') : 'Nunca'}</td>
+          <td class="actions-cell">
+            <button class="btn btn-sm btn-outline" onclick="ISP.testRouter('${r.id}')" title="Probar conexión">🔌</button>
+            <button class="btn btn-sm btn-outline" onclick="ISP.editRouter('${r.id}')" title="Editar">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="ISP.confirmDeleteRouter('${r.id}','${r.name}')" title="Eliminar">🗑️</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (error) {
+      console.error('[ISP] Error cargando routers:', error);
+    }
+  },
+
+  /**
+   * Mostrar modal para agregar router
+   */
+  showAddRouterModal() {
+    document.getElementById('router-modal-title').textContent = 'Agregar Router';
+    document.getElementById('router-id').value = '';
+    document.getElementById('isp-router-form').reset();
+    document.getElementById('router-port').value = '443';
+    document.getElementById('router-username').value = 'admin';
+    document.getElementById('router-ssl').checked = true;
+    document.getElementById('isp-router-modal').style.display = 'flex';
+  },
+
+  /**
+   * Guardar router (crear o actualizar)
+   */
+  async saveRouter(event) {
+    event.preventDefault();
+    const id = document.getElementById('router-id').value;
+    const data = {
+      name: document.getElementById('router-name').value,
+      host: document.getElementById('router-host').value,
+      port: parseInt(document.getElementById('router-port').value) || 443,
+      username: document.getElementById('router-username').value || 'admin',
+      password: document.getElementById('router-password').value,
+      ssl: document.getElementById('router-ssl').checked,
+      api_port: parseInt(document.getElementById('router-api-port').value) || null,
+      comment: document.getElementById('router-comment').value
+    };
+
+    try {
+      const endpoint = id ? `/isp/routers/${id}` : '/isp/routers';
+      const method = id ? 'put' : 'post';
+      const res = await API[method](endpoint, data);
+      if (res.success) {
+        App.toast(res.message, 'success');
+        this.closeModal('isp-router-modal');
+        await this.loadRouters();
+      } else {
+        App.toast(res.message, 'error');
+      }
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
+    }
+  },
+
+  /**
+   * Editar router
+   */
+  async editRouter(id) {
+    try {
+      const res = await API.get('/isp/routers');
+      if (!res.success) return;
+      const router = res.data.find(r => r.id === id);
+      if (!router) return;
+
+      document.getElementById('router-modal-title').textContent = 'Editar Router';
+      document.getElementById('router-id').value = router.id;
+      document.getElementById('router-name').value = router.name;
+      document.getElementById('router-host').value = router.host;
+      document.getElementById('router-port').value = router.port;
+      document.getElementById('router-api-port').value = router.api_port || '';
+      document.getElementById('router-username').value = router.username;
+      document.getElementById('router-password').value = '';
+      document.getElementById('router-ssl').checked = !!router.ssl;
+      document.getElementById('router-comment').value = router.comment || '';
+      document.getElementById('isp-router-modal').style.display = 'flex';
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
+    }
+  },
+
+  /**
+   * Probar conexión con un router
+   */
+  async testRouter(id) {
+    try {
+      const res = await API.post(`/isp/routers/${id}/test`);
+      if (res.success && res.data) {
+        if (res.data.connected) {
+          App.toast(`✅ Conectado a ${res.data.identity} (v${res.data.version})`, 'success');
+        } else {
+          App.toast(`❌ Error: ${res.data.error}`, 'error');
+        }
+        await this.loadRouters();
+      }
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
+    }
+  },
+
+  /**
+   * Activar router como principal
+   */
+  async activateRouter(id) {
+    try {
+      const res = await API.post(`/isp/routers/${id}/activate`);
+      if (res.success) {
+        App.toast(res.message, 'success');
+        await this.loadRouters();
+      }
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
+    }
+  },
+
+  /**
+   * Confirmar y eliminar router
+   */
+  async confirmDeleteRouter(id, name) {
+    if (!confirm(`¿Eliminar router "${name}"?`)) return;
+    try {
+      const res = await API.delete(`/isp/routers/${id}`);
+      if (res.success) {
+        App.toast(res.message, 'success');
+        await this.loadRouters();
+      }
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
+    }
+  },
+
+  /**
+   * Mostrar modal de escaneo de red
+   */
+  showScanModal() {
+    document.getElementById('isp-scan-form').reset();
+    document.getElementById('scan-subnet').value = '192.168.88.0/24';
+    document.getElementById('scan-username').value = 'admin';
+    document.getElementById('scan-timeout').value = '3000';
+    document.getElementById('scan-results').style.display = 'none';
+    document.getElementById('scan-btn').disabled = false;
+    document.getElementById('scan-btn').textContent = '🔍 Iniciar Escaneo';
+    document.getElementById('isp-scan-modal').style.display = 'flex';
+  },
+
+  /**
+   * Iniciar escaneo de red
+   */
+  async scanNetwork(event) {
+    event.preventDefault();
+    const btn = document.getElementById('scan-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Escaneando...';
+
+    try {
+      const res = await API.post('/isp/routers/scan', {
+        subnet: document.getElementById('scan-subnet').value,
+        username: document.getElementById('scan-username').value || 'admin',
+        password: document.getElementById('scan-password').value,
+        timeout: parseInt(document.getElementById('scan-timeout').value) || 3000
+      });
+
+      if (res.success) {
+        App.toast('Escaneo iniciado. Los routers detectados se agregarán automáticamente.', 'success');
+        // Esperar un momento y recargar
+        setTimeout(() => {
+          this.loadRouters();
+          this.closeModal('isp-scan-modal');
+        }, 2000);
+      } else {
+        App.toast(res.message, 'error');
+      }
+    } catch (error) {
+      App.toast(`Error: ${error.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔍 Iniciar Escaneo';
     }
   },
 

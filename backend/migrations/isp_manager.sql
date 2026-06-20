@@ -102,3 +102,31 @@ CREATE TABLE IF NOT EXISTS `isp_sessions` (
   KEY `idx_username` (`username`),
   KEY `idx_session_start` (`session_start`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Tabla: isp_routers
+-- Routers MikroTik registrados para gestión ISP
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `isp_routers` (
+  `id` VARCHAR(36) NOT NULL PRIMARY KEY,
+  `name` VARCHAR(64) NOT NULL COMMENT 'Nombre descriptivo del router',
+  `host` VARCHAR(255) NOT NULL COMMENT 'IP o dominio del router',
+  `port` INT NOT NULL DEFAULT 443 COMMENT 'Puerto REST API',
+  `username` VARCHAR(64) NOT NULL DEFAULT 'admin',
+  `password` VARCHAR(128) NOT NULL DEFAULT '',
+  `ssl` TINYINT(1) NOT NULL DEFAULT 1,
+  `api_port` INT DEFAULT 8728 COMMENT 'Puerto API/Socket (opcional)',
+  `identity` VARCHAR(64) DEFAULT NULL COMMENT 'Identidad del router (leída al conectar)',
+  `model` VARCHAR(64) DEFAULT NULL COMMENT 'Modelo del router',
+  `version` VARCHAR(32) DEFAULT NULL COMMENT 'Versión de RouterOS',
+  `is_active` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Router activo para operaciones',
+  `is_online` TINYINT(1) NOT NULL DEFAULT 0,
+  `last_connected_at` TIMESTAMP NULL DEFAULT NULL,
+  `discovery_method` ENUM('manual','scan','domain') NOT NULL DEFAULT 'manual',
+  `comment` TEXT DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_host_port` (`host`, `port`),
+  KEY `idx_is_active` (`is_active`),
+  KEY `idx_is_online` (`is_online`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

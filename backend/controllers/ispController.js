@@ -1423,6 +1423,304 @@ const ispController = {
       res.status(500).json({ success: false, message: error.message });
     }
   }
+
+  // ==========================================================
+  // GESTIÓN DE ROUTERS (Detección, conexión manual, dominio)
+  // ==========================================================
+
+  /**
+   * GET /api/isp/routers
+   * Listar todos los routers registrados
+   */
+  async getRouters(req, res) {
+    try {
+      const pool = getIspPool();
+      const [rows] = await pool.execute(
+        'SELECT id, name, host, port, username, ssl, api_port, identity, model, version, is_active, is_online, last_connected_at, discovery_method, comment, created_at, updated_at FROM isp_routers ORDER BY is_active DESC, name ASC'
+      );
+      res.json({ success: true, data: rows });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * POST /api/isp/routers
+   * Agregar un router manualmente (IP o dominio)
+   */
+  async addRouter(req, res) {
+    try {
+      const { name, host, port, username, password, ssl, api_port, comment } = req.body;
+      if (!name || !host) {
+        return res.status(400).json({ success: false, message: 'name y host son requeridos' });
+      }
+      const pool = getIspPool();
+      const id = uuidv4();
+      const routerPort = port || 443;
+      const routerSsl = ssl !== undefined ? (ssl ? 1 : 0) : 1;
+
+      // Probar conexión antes de guardar
+      const testResult = await MikrotikEngine.testConnectionStatic({
+        host, port: routerPort, ssl: !!routerSsl,
+        username: username || 'admin',
+        password: password || ''
+      });
+
+      await pool.execute(
+        `INSERT INTO isp_routers (id, name, host, port, username, password, ssl, api_port, identity, model, version, is_online, discovery_method, comment)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id, name, host, routerPort,
+          username || 'admin', password || '',
+          routerSsl, api_port || null,
+          testResult.connected ? testResult.identity : null,
+          null, testResult.connected ? testResult.version : null,
+          testResult.connected ? 1 : 0,
+          'manual', comment || null
+        ]
+      );
+
+      res.status(201).json({
+        success: true,
+        message: testResult.connected
+          ? `Router ${name} agregado y conectado exitosamente`
+          : `Router ${name} agregado pero no se pudo conectar (verificar credenciales)`,
+        data: { id, connected: testResult.connected }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * PUT /api/isp/routers/:id
+   * Actualizar configuración de un router
+   */
+  async updateRouter(req, res) {
+    try {
+      const { id } = req.params;
+      const { name, host, port, username, password, ssl, api_port, comment } = req.body;
+      const pool = getIspPool();
+
+      const [existing] = await pool.execute('SELECT id FROM isp_routers WHERE id = ?', [id]);
+      if (existing.length === 0) {
+        return res.status(404).json({ success: false, message: 'Router no encontrado' });
+      }
+
+      const updates = [];
+      const params = [];
+      if (name !== undefined) { updates.push('name = ?'); params.push(name); }
+      if (host !== undefined) { updates.push('host = ?'); params.push(host); }
+      if (port !== undefined) { updates.push('port = ?'); params.push(port); }
+      if (username !== undefined) { updates.push('username = ?'); params.push(username); }
+      if (password !== undefined) { updates.push('password = ?'); params.push(password); }
+      if (ssl !== undefined) { updates.push('ssl = ?'); params.push(ssl ? 1 : 0); }
+      if (api_port !== undefined) { updates.push('api_port = ?'); params.push(api_port); }
+      if (comment !== undefined) { updates.push('comment = ?'); params.push(comment); }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ success: false, message: 'No hay campos para actualizar' });
+      }
+
+      updates.push('updated_at = NOW()');
+      params.push(id);
+
+      await pool.execute(`UPDATE isp_routers SET ${updates.join(', ')} WHERE id = ?`, params);
+      res.json({ success: true, message: 'Router actualizado' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * DELETE /api/isp/routers/:id
+   * Eliminar un router registrado
+   */
+  async deleteRouter(req, res) {
+    try {
+      const { id } = req.params;
+      const pool = getIspPool();
+      const [result] = await pool.execute('DELETE FROM isp_routers WHERE id = ?', [id]);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: 'Router no encontrado' });
+      }
+      res.json({ success: true, message: 'Router eliminado' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * POST /api/isp/routers/:id/test
+   * Probar conexión con un router registrado
+   */
+  async testRouterConnection(req, res) {
+    try {
+      const { id } = req.params;
+      const pool = getIspPool();
+      const [rows] = await pool.execute('SELECT * FROM isp_routers WHERE id = ?', [id]);
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Router no encontrado' });
+      }
+
+      const router = rows[0];
+      const result = await MikrotikEngine.testConnectionStatic({
+        host: router.host,
+        port: router.port,
+        ssl: !!router.ssl,
+        username: router.username,
+        password: router.password
+      });
+
+      // Actualizar estado online
+      await pool.execute(
+        'UPDATE isp_routers SET is_online = ?, identity = ?, version = ?, last_connected_at = IF(? = 1, NOW(), last_connected_at) WHERE id = ?',
+        [result.connected ? 1 : 0, result.identity || null, result.version || null, result.connected ? 1 : 0, id]
+      );
+
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * POST /api/isp/routers/:id/activate
+   * Establecer un router como activo para operaciones ISP
+   */
+  async setActiveRouter(req, res) {
+    try {
+      const { id } = req.params;
+      const pool = getIspPool();
+
+      const [rows] = await pool.execute('SELECT * FROM isp_routers WHERE id = ?', [id]);
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Router no encontrado' });
+      }
+
+      // Desactivar todos los routers
+      await pool.execute('UPDATE isp_routers SET is_active = 0');
+      // Activar el seleccionado
+      await pool.execute('UPDATE isp_routers SET is_active = 1 WHERE id = ?', [id]);
+
+      // Configurar el engine global con los datos de este router
+      const router = rows[0];
+      engine.configure({
+        host: router.host,
+        port: router.port,
+        username: router.username,
+        password: router.password,
+        ssl: !!router.ssl
+      });
+
+      res.json({ success: true, message: `Router ${router.name} activado como principal` });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * POST /api/isp/routers/scan
+   * Escanear red local para detectar routers MikroTik
+   */
+  async scanNetwork(req, res) {
+    try {
+      const { subnet, username, password, timeout } = req.body;
+      if (!subnet) {
+        return res.status(400).json({ success: false, message: 'subnet (CIDR) es requerido. Ej: 192.168.88.0/24' });
+      }
+
+      res.json({ success: true, message: 'Escaneo iniciado...', data: { subnet } });
+
+      // El escaneo se ejecuta asíncronamente
+      MikrotikEngine.scanNetwork(subnet, { username, password }, timeout || 3000, 10)
+        .then(async (detected) => {
+          if (detected.length > 0) {
+            const pool = getIspPool();
+            for (const router of detected) {
+              // Verificar si ya existe
+              const [existing] = await pool.execute(
+                'SELECT id FROM isp_routers WHERE host = ?', [router.host]
+              );
+              if (existing.length === 0) {
+                const id = uuidv4();
+                const bestService = router.services.find(s => s.connected) || {};
+                await pool.execute(
+                  `INSERT INTO isp_routers (id, name, host, port, username, password, ssl, identity, version, is_online, discovery_method)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'scan')`,
+                  [
+                    id,
+                    router.identity || `Router-${router.host}`,
+                    router.host,
+                    bestService.port || 443,
+                    username || 'admin',
+                    password || '',
+                    bestService.ssl ? 1 : 0,
+                    router.identity || null,
+                    router.version || null
+                  ]
+                );
+              }
+            }
+            console.log(`[ISP] Escaneo completado: ${detected.length} router(es) detectado(s)`);
+          }
+        })
+        .catch(err => console.error('[ISP] Error en escaneo asíncrono:', err.message));
+
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * POST /api/isp/routers/scan-host
+   * Escanear un host específico (IP o dominio)
+   */
+  async scanHost(req, res) {
+    try {
+      const { host, username, password } = req.body;
+      if (!host) {
+        return res.status(400).json({ success: false, message: 'host es requerido' });
+      }
+
+      const result = await MikrotikEngine.scanHost(host, { username, password });
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * GET /api/isp/routers/active
+   * Obtener el router activo actual
+   */
+  async getActiveRouter(req, res) {
+    try {
+      const pool = getIspPool();
+      const [rows] = await pool.execute(
+        'SELECT id, name, host, port, username, ssl, identity, model, version, is_online, last_connected_at FROM isp_routers WHERE is_active = 1 LIMIT 1'
+      );
+      if (rows.length === 0) {
+        // Devolver el router configurado por defecto (env vars)
+        return res.json({
+          success: true,
+          data: {
+            id: 'default',
+            name: 'Router por defecto (env)',
+            host: config.isp?.mikrotik?.host || process.env.ISP_MIKROTIK_HOST || '127.0.0.1',
+            port: config.isp?.mikrotik?.port || process.env.ISP_MIKROTIK_PORT || 443,
+            username: config.isp?.mikrotik?.username || process.env.ISP_MIKROTIK_USER || 'admin',
+            ssl: true,
+            is_online: false,
+            is_default: true
+          }
+        });
+      }
+      res.json({ success: true, data: rows[0] });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
 };
 
 module.exports = ispController;

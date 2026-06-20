@@ -695,6 +695,149 @@ class MikrotikEngine {
   }
 
   /**
+   * Prueba de conexión estática (sin modificar la instancia actual)
+   * @param {Object} opts - { host, port, username, password, ssl, timeout }
+   * @returns {Promise<Object>} Resultado de la prueba
+   */
+  static async testConnectionStatic(opts = {}) {
+    const engine = new MikrotikEngine(opts);
+    return engine.testConnection();
+  }
+
+  /**
+   * Escanea un host específico para detectar si es un MikroTik
+   * Prueba REST API (443), API/Socket (8728), y HTTP (80)
+   * @param {string} host - IP o dominio a escanear
+   * @param {Object} [credentials] - { username, password } opcional
+   * @param {number} [timeout=5000] - Timeout por intento
+   * @returns {Promise<Object>} Resultado del escaneo
+   */
+  static async scanHost(host, credentials = {}, timeout = 5000) {
+    const username = credentials.username || 'admin';
+    const password = credentials.password || '';
+    const results = { host, services: [], detected: false };
+
+    // Puertos a probar: REST API SSL (443), REST API HTTP (80), API/Socket (8728)
+    const portsToTry = [
+      { port: 443, ssl: true, service: 'rest-api-ssl' },
+      { port: 80, ssl: false, service: 'rest-api-http' },
+      { port: 8728, ssl: false, service: 'api-socket' }
+    ];
+
+    for (const { port, ssl, service } of portsToTry) {
+      try {
+        const engine = new MikrotikEngine({
+          host, port, ssl,
+          username, password,
+          timeout
+        });
+        const result = await engine.testConnection();
+        results.services.push({
+          service,
+          port,
+          ssl,
+          connected: result.connected,
+          identity: result.identity || null,
+          version: result.version || null,
+          error: result.error || null
+        });
+        if (result.connected) {
+          results.detected = true;
+          results.identity = result.identity;
+          results.version = result.version;
+        }
+      } catch (err) {
+        results.services.push({
+          service,
+          port,
+          ssl,
+          connected: false,
+          error: err.message
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Escanea un rango de red para detectar routers MikroTik
+   * @param {string} subnet - Subred en formato CIDR (ej: '192.168.88.0/24')
+   * @param {Object} [credentials] - { username, password } opcional
+   * @param {number} [timeout=3000] - Timeout por host
+   * @param {number} [concurrency=10] - Hosts simultáneos
+   * @returns {Promise<Array>} Lista de routers detectados
+   */
+  static async scanNetwork(subnet, credentials = {}, timeout = 3000, concurrency = 10) {
+    const detected = [];
+    const ips = MikrotikEngine._expandCIDR(subnet);
+
+    // Procesar en lotes para controlar concurrencia
+    for (let i = 0; i < ips.length; i += concurrency) {
+      const batch = ips.slice(i, i + concurrency);
+      const results = await Promise.allSettled(
+        batch.map(ip => MikrotikEngine.scanHost(ip, credentials, timeout))
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value.detected) {
+          detected.push(result.value);
+        }
+      }
+    }
+
+    return detected;
+  }
+
+  /**
+   * Expande una notación CIDR a lista de IPs
+   * @param {string} cidr - Ej: '192.168.88.0/24'
+   * @returns {string[]} Lista de IPs
+   */
+  static _expandCIDR(cidr) {
+    const [base, bits] = cidr.split('/');
+    const mask = parseInt(bits) || 24;
+    const octets = base.split('.').map(Number);
+    
+    if (octets.length !== 4 || octets.some(isNaN)) {
+      return [base]; // Si no es CIDR válido, devolver la IP tal cual
+    }
+
+    const ipInt = (octets[0] << 24) | (octets[1] << 16) | (octets[2] << 8) | octets[3];
+    const hostBits = 32 - mask;
+    const totalHosts = Math.pow(2, hostBits);
+
+    // Limitar a /24 (256 hosts) o menos para no saturar
+    if (totalHosts > 256) {
+      // Solo escanear los primeros 256 hosts
+      const limited = Math.min(256, totalHosts);
+      const ips = [];
+      for (let i = 1; i < limited; i++) {
+        const addr = ipInt + i;
+        ips.push([
+          (addr >>> 24) & 255,
+          (addr >>> 16) & 255,
+          (addr >>> 8) & 255,
+          addr & 255
+        ].join('.'));
+      }
+      return ips;
+    }
+
+    const ips = [];
+    for (let i = 1; i < totalHosts - 1; i++) {
+      const addr = ipInt + i;
+      ips.push([
+        (addr >>> 24) & 255,
+        (addr >>> 16) & 255,
+        (addr >>> 8) & 255,
+        addr & 255
+      ].join('.'));
+    }
+    return ips;
+  }
+
+  /**
    * Obtener estadísticas consolidadas del router
    * @returns {Promise<Object>}
    */

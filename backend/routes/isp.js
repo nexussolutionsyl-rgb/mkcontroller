@@ -105,4 +105,21 @@ router.post('/webhook/netwatch', ispController.netwatchWebhook);
 // ============================================================
 router.get('/alerts', authenticate, ispController.getAlerts);
 
+// ============================================================
+// Gestión de Routers (protegidas)
+// ============================================================
+router.get('/routers', authenticate, ispController.getRouters);
+router.post('/routers', authenticate, ispController.addRouter);
+router.put('/routers/:id', authenticate, ispController.updateRouter);
+router.delete('/routers/:id', authenticate, ispController.deleteRouter);
+router.post('/routers/:id/test', authenticate, ispController.testRouterConnection);
+router.post('/routers/:id/activate', authenticate, ispController.setActiveRouter);
+
+// Escaneo de red
+router.post('/routers/scan', authenticate, ispController.scanNetwork);
+router.post('/routers/scan-host', authenticate, ispController.scanHost);
+
+// Router activo actual
+router.get('/routers/active', authenticate, ispController.getActiveRouter);
+
 module.exports = router;
