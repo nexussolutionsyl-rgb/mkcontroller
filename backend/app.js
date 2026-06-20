@@ -16,6 +16,7 @@ const routersRoutes = require('./routes/routers');
 const hotspotRoutes = require('./routes/hotspot');
 const dashboardRoutes = require('./routes/dashboard');
 const nexusmkRoutes = require('./routes/nexusmk');
+const ispRoutes = require('./routes/isp');
 
 const app = express();
 
@@ -100,6 +101,7 @@ app.use('/api/routers', routersRoutes);
 app.use('/api/hotspot', hotspotRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/nexusmk', nexusmkRoutes);
+app.use('/api/isp', ispRoutes);
 
 // ============================================
 // Manejo de errores

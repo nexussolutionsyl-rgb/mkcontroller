@@ -36,11 +36,30 @@ module.exports = {
     database: process.env.MYSQL_DATABASE || 'nexusmk'
   },
 
-  // Configuración por defecto para conexión MikroTik
+  // Configuración por defecto para conexión MikroTik (API/Socket)
   mikrotik: {
     defaultPort: 8728,
     defaultApiPort: 8728,
     connectionTimeout: 5000,
     commandTimeout: 10000
+  },
+
+  // Configuración ISP Manager (REST API v7)
+  isp: {
+    mikrotik: {
+      host: process.env.ISP_MIKROTIK_HOST || '127.0.0.1',
+      port: parseInt(process.env.ISP_MIKROTIK_PORT) || 443,
+      username: process.env.ISP_MIKROTIK_USER || 'admin',
+      password: process.env.ISP_MIKROTIK_PASSWORD || '',
+      ssl: process.env.ISP_MIKROTIK_SSL !== 'false',
+      timeout: parseInt(process.env.ISP_MIKROTIK_TIMEOUT) || 10000
+    },
+    // Prefijo de ruta para la API ISP
+    apiPrefix: '/api/isp',
+    // Configuración de webhook Telegram
+    telegram: {
+      botToken: process.env.ISP_TELEGRAM_BOT_TOKEN || '',
+      chatId: process.env.ISP_TELEGRAM_CHAT_ID || ''
+    }
   }
 };
