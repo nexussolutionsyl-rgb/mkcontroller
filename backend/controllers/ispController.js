@@ -37,16 +37,9 @@ const engine = new MikrotikEngine(config.isp?.mikrotik);
 // ============================================================
 // Controlador
 // ============================================================
-const ispController = {
+const ispController = {};
 
-  // ==========================================================
-  // HEALTH CHECK
-  // ==========================================================
-  /**
-   * GET /api/isp/health
-   * Verifica el estado del módulo ISP Manager
-   */
-  async health(req, res) {
+  ispController.health = async function(req, res) {
     try {
       const pool = getIspPool();
       // Verificar conexión MySQL
@@ -75,15 +68,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // PPP PROFILES (Perfiles)
-  // ==========================================================
-
-  /**
-   * GET /api/isp/ppp/profiles
-   * Obtener todos los perfiles PPP desde RouterOS
-   */
-  async getPPPProfiles(req, res) {
+  ispController.getPPPProfiles = async function(req, res) {
     try {
       const profiles = await engine.getPPPProfiles();
       res.json({ success: true, data: profiles });
@@ -92,11 +77,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/ppp/profiles
-   * Crear un perfil PPP en RouterOS y guardarlo en BD
-   */
-  async createPPPProfile(req, res) {
+  ispController.createPPPProfile = async function(req, res) {
     try {
       const { name, localAddress, remoteAddress, rateLimit, onlyOne, comment } = req.body;
       if (!name) {
@@ -123,11 +104,7 @@ const ispController = {
     }
   },
 
-  /**
-   * PUT /api/isp/ppp/profiles/:name
-   * Actualizar un perfil PPP
-   */
-  async updatePPPProfile(req, res) {
+  ispController.updatePPPProfile = async function(req, res) {
     try {
       const { name } = req.params;
       const { localAddress, remoteAddress, rateLimit, onlyOne, comment } = req.body;
@@ -149,11 +126,7 @@ const ispController = {
     }
   },
 
-  /**
-   * DELETE /api/isp/ppp/profiles/:name
-   * Eliminar un perfil PPP
-   */
-  async deletePPPProfile(req, res) {
+  ispController.deletePPPProfile = async function(req, res) {
     try {
       const { name } = req.params;
       await engine.deletePPPProfile(name);
@@ -168,15 +141,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // HOTSPOT PROFILES
-  // ==========================================================
-
-  /**
-   * GET /api/isp/hotspot/profiles
-   * Obtener perfiles Hotspot desde RouterOS
-   */
-  async getHotspotProfiles(req, res) {
+  ispController.getHotspotProfiles = async function(req, res) {
     try {
       const profiles = await engine.getHotspotProfiles();
       res.json({ success: true, data: profiles });
@@ -185,11 +150,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/hotspot/profiles
-   * Crear un perfil Hotspot
-   */
-  async createHotspotProfile(req, res) {
+  ispController.createHotspotProfile = async function(req, res) {
     try {
       const { name, sharedUsers, rateLimit, sessionTimeout, idleTimeout, keepaliveTimeout, comment } = req.body;
       if (!name) {
@@ -215,11 +176,7 @@ const ispController = {
     }
   },
 
-  /**
-   * DELETE /api/isp/hotspot/profiles/:name
-   * Eliminar un perfil Hotspot
-   */
-  async deleteHotspotProfile(req, res) {
+  ispController.deleteHotspotProfile = async function(req, res) {
     try {
       const { name } = req.params;
       await engine.deleteHotspotProfile(name);
@@ -233,11 +190,7 @@ const ispController = {
     }
   },
 
-  /**
-   * PUT /api/isp/hotspot/profiles/:name
-   * Actualizar un perfil Hotspot
-   */
-  async updateHotspotProfile(req, res) {
+  ispController.updateHotspotProfile = async function(req, res) {
     try {
       const { name } = req.params;
       const { sharedUsers, rateLimit, sessionTimeout, idleTimeout, keepaliveTimeout, comment } = req.body;
@@ -259,15 +212,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // IP POOLS
-  // ==========================================================
-
-  /**
-   * GET /api/isp/pools
-   * Obtener IP Pools desde RouterOS
-   */
-  async getIPPools(req, res) {
+  ispController.getIPPools = async function(req, res) {
     try {
       const pools = await engine.getIPPools();
       res.json({ success: true, data: pools });
@@ -276,11 +221,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/pools
-   * Crear un IP Pool
-   */
-  async createIPPool(req, res) {
+  ispController.createIPPool = async function(req, res) {
     try {
       const { name, ranges, comment } = req.body;
       if (!name || !ranges) {
@@ -304,11 +245,7 @@ const ispController = {
     }
   },
 
-  /**
-   * DELETE /api/isp/pools/:name
-   * Eliminar un IP Pool
-   */
-  async deleteIPPool(req, res) {
+  ispController.deleteIPPool = async function(req, res) {
     try {
       const { name } = req.params;
       await engine.deleteIPPool(name);
@@ -322,11 +259,7 @@ const ispController = {
     }
   },
 
-  /**
-   * PUT /api/isp/pools/:name
-   * Actualizar un IP Pool
-   */
-  async updateIPPool(req, res) {
+  ispController.updateIPPool = async function(req, res) {
     try {
       const { name } = req.params;
       const { ranges, comment } = req.body;
@@ -349,16 +282,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // PPP SECRETS (Clientes PPPoE/VPN)
-  // ==========================================================
-
-  /**
-   * GET /api/isp/clients
-   * Obtener clientes PPP desde RouterOS o desde BD local
-   * Query params: ?source=routeros (default) | ?source=db | ?search=text
-   */
-  async getPPPSecrets(req, res) {
+  ispController.getPPPSecrets = async function(req, res) {
     try {
       const source = req.query.source || 'routeros';
       const search = req.query.search || null;
@@ -387,11 +311,7 @@ const ispController = {
     }
   },
 
-  /**
-   * GET /api/isp/clients/db
-   * Obtener clientes desde la BD local con filtros
-   */
-  async getClientsFromDB(req, res) {
+  ispController.getClientsFromDB = async function(req, res) {
     try {
       const pool = getIspPool();
       const { service, disabled, search, plan_id, limit, offset } = req.query;
@@ -446,11 +366,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/clients
-   * Crear un cliente PPP (PPP secret + BD)
-   */
-  async createPPPSecret(req, res) {
+  ispController.createPPPSecret = async function(req, res) {
     try {
       const { username, password, service, profile, ipAddress, comment } = req.body;
       if (!username || !password) {
@@ -482,11 +398,7 @@ const ispController = {
     }
   },
 
-  /**
-   * PUT /api/isp/clients/:username
-   * Actualizar un cliente PPP
-   */
-  async updatePPPSecret(req, res) {
+  ispController.updatePPPSecret = async function(req, res) {
     try {
       const { username } = req.params;
       const { password, service, profile, ipAddress, comment, disabled } = req.body;
@@ -520,11 +432,7 @@ const ispController = {
     }
   },
 
-  /**
-   * DELETE /api/isp/clients/:username
-   * Eliminar un cliente PPP
-   */
-  async deletePPPSecret(req, res) {
+  ispController.deletePPPSecret = async function(req, res) {
     try {
       const { username } = req.params;
       await engine.deletePPPSecret(username);
@@ -538,11 +446,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/clients/:username/enable
-   * Habilitar un cliente PPP
-   */
-  async enablePPPSecret(req, res) {
+  ispController.enablePPPSecret = async function(req, res) {
     try {
       const { username } = req.params;
       await engine.enablePPPSecret(username);
@@ -556,11 +460,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/clients/:username/disable
-   * Deshabilitar un cliente PPP
-   */
-  async disablePPPSecret(req, res) {
+  ispController.disablePPPSecret = async function(req, res) {
     try {
       const { username } = req.params;
       await engine.disablePPPSecret(username);
@@ -574,11 +474,7 @@ const ispController = {
     }
   },
 
-  /**
-   * GET /api/isp/clients/active
-   * Obtener sesiones PPP activas
-   */
-  async getPPPActive(req, res) {
+  ispController.getPPPActive = async function(req, res) {
     try {
       const active = await engine.getPPPActive();
       res.json({ success: true, data: active });
@@ -587,16 +483,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // HOTSPOT USERS
-  // ==========================================================
-
-  /**
-   * GET /api/isp/hotspot/users
-   * Obtener usuarios Hotspot desde RouterOS o BD
-   * Query params: ?source=routeros (default) | ?source=db | ?search=text
-   */
-  async getHotspotUsers(req, res) {
+  ispController.getHotspotUsers = async function(req, res) {
     try {
       const source = req.query.source || 'routeros';
       const search = req.query.search || null;
@@ -624,11 +511,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/hotspot/users
-   * Crear un usuario Hotspot
-   */
-  async createHotspotUser(req, res) {
+  ispController.createHotspotUser = async function(req, res) {
     try {
       const { name, password, profile, server, limitUptime, limitBytes, comment } = req.body;
       if (!name) {
@@ -654,11 +537,7 @@ const ispController = {
     }
   },
 
-  /**
-   * DELETE /api/isp/hotspot/users/:name
-   * Eliminar un usuario Hotspot
-   */
-  async deleteHotspotUser(req, res) {
+  ispController.deleteHotspotUser = async function(req, res) {
     try {
       const { name } = req.params;
       await engine.deleteHotspotUser(name);
@@ -672,11 +551,7 @@ const ispController = {
     }
   },
 
-  /**
-   * PUT /api/isp/hotspot/users/:name
-   * Actualizar un usuario Hotspot
-   */
-  async updateHotspotUser(req, res) {
+  ispController.updateHotspotUser = async function(req, res) {
     try {
       const { name } = req.params;
       const { password, profile, server, limitUptime, limitBytes, comment } = req.body;
@@ -698,11 +573,7 @@ const ispController = {
     }
   },
 
-  /**
-   * GET /api/isp/hotspot/active
-   * Obtener usuarios Hotspot activos
-   */
-  async getHotspotActive(req, res) {
+  ispController.getHotspotActive = async function(req, res) {
     try {
       const active = await engine.getHotspotActive();
       res.json({ success: true, data: active });
@@ -711,11 +582,7 @@ const ispController = {
     }
   },
 
-  /**
-   * GET /api/isp/hotspot/servers
-   * Obtener servidores Hotspot
-   */
-  async getHotspotServers(req, res) {
+  ispController.getHotspotServers = async function(req, res) {
     try {
       const servers = await engine.getHotspotServers();
       res.json({ success: true, data: servers });
@@ -724,15 +591,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // SISTEMA E INTERFACES
-  // ==========================================================
-
-  /**
-   * GET /api/isp/system/info
-   * Obtener información del sistema del router
-   */
-  async getSystemInfo(req, res) {
+  ispController.getSystemInfo = async function(req, res) {
     try {
       const [resource, identity, interfaces] = await Promise.all([
         engine.getSystemResource(),
@@ -761,11 +620,7 @@ const ispController = {
     }
   },
 
-  /**
-   * GET /api/isp/system/interfaces
-   * Obtener interfaces del router
-   */
-  async getInterfaces(req, res) {
+  ispController.getInterfaces = async function(req, res) {
     try {
       const interfaces = await engine.getInterfaces();
       res.json({ success: true, data: interfaces });
@@ -774,11 +629,7 @@ const ispController = {
     }
   },
 
-  /**
-   * GET /api/isp/system/dhcp-leases
-   * Obtener leases DHCP
-   */
-  async getDHCPLeases(req, res) {
+  ispController.getDHCPLeases = async function(req, res) {
     try {
       const leases = await engine.getDHCPLeases();
       res.json({ success: true, data: leases });
@@ -787,11 +638,7 @@ const ispController = {
     }
   },
 
-  /**
-   * GET /api/isp/system/firewall
-   * Obtener reglas de firewall
-   */
-  async getFirewallRules(req, res) {
+  ispController.getFirewallRules = async function(req, res) {
     try {
       const rules = await engine.getFirewallRules();
       res.json({ success: true, data: rules });
@@ -800,15 +647,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // ESTADÍSTICAS
-  // ==========================================================
-
-  /**
-   * GET /api/isp/stats
-   * Obtener estadísticas consolidadas
-   */
-  async getStats(req, res) {
+  ispController.getStats = async function(req, res) {
     try {
       const [routerStats, pool] = await Promise.all([
         engine.getStats(),
@@ -849,16 +688,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // WEBHOOK - NETWATCH
-  // ==========================================================
-
-  /**
-   * POST /api/isp/webhook/netwatch
-   * Endpoint para recibir alertas de Netwatch desde el MikroTik
-   * RouterOS envía: { host, status, message, event_type }
-   */
-  async netwatchWebhook(req, res) {
+  ispController.netwatchWebhook = async function(req, res) {
     try {
       const { host, status, message, event_type } = req.body;
       
@@ -913,11 +743,7 @@ const ispController = {
     }
   },
 
-  /**
-   * GET /api/isp/alerts
-   * Obtener historial de alertas
-   */
-  async getAlerts(req, res) {
+  ispController.getAlerts = async function(req, res) {
     try {
       const pool = getIspPool();
       const limit = parseInt(req.query.limit) || 50;
@@ -960,15 +786,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // TELEGRAM (interno)
-  // ==========================================================
-
-  /**
-   * Envía una alerta a Telegram
-   * @private
-   */
-  async _sendTelegramAlert(alert) {
+  ispController._sendTelegramAlert = async function(alert) {
     try {
       const { botToken, chatId } = config.isp.telegram;
       if (!botToken || !chatId) {
@@ -1016,15 +834,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // SINCRONIZACIÓN - Importar perfiles desde RouterOS a BD
-  // ==========================================================
-
-  /**
-   * POST /api/isp/ppp/profiles/sync
-   * Importar todos los perfiles PPP desde RouterOS a la BD local
-   */
-  async syncPPPProfiles(req, res) {
+  ispController.syncPPPProfiles = async function(req, res) {
     try {
       const profiles = await engine.getPPPProfiles();
       const pool = getIspPool();
@@ -1074,11 +884,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/hotspot/profiles/sync
-   * Importar perfiles Hotspot desde RouterOS a la BD
-   */
-  async syncHotspotProfiles(req, res) {
+  ispController.syncHotspotProfiles = async function(req, res) {
     try {
       const profiles = await engine.getHotspotProfiles();
       const pool = getIspPool();
@@ -1125,11 +931,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/pools/sync
-   * Importar IP Pools desde RouterOS a la BD
-   */
-  async syncIPPools(req, res) {
+  ispController.syncIPPools = async function(req, res) {
     try {
       const pools = await engine.getIPPools();
       const pool = getIspPool();
@@ -1175,15 +977,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // PLANES - CRUD desde BD local
-  // ==========================================================
-
-  /**
-   * GET /api/isp/plans
-   * Obtener planes desde la BD local
-   */
-  async getPlans(req, res) {
+  ispController.getPlans = async function(req, res) {
     try {
       const pool = getIspPool();
       const service = req.query.service || null;
@@ -1204,11 +998,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/plans
-   * Crear un plan en BD (sin RouterOS)
-   */
-  async createPlan(req, res) {
+  ispController.createPlan = async function(req, res) {
     try {
       const { name, service, speedLimit, sessionTimeout, sharedUsers, price, comment } = req.body;
       if (!name || !service) {
@@ -1229,11 +1019,7 @@ const ispController = {
     }
   },
 
-  /**
-   * PUT /api/isp/plans/:id
-   * Actualizar un plan en BD
-   */
-  async updatePlan(req, res) {
+  ispController.updatePlan = async function(req, res) {
     try {
       const { id } = req.params;
       const { name, service, speedLimit, sessionTimeout, sharedUsers, price, comment } = req.body;
@@ -1260,11 +1046,7 @@ const ispController = {
     }
   },
 
-  /**
-   * DELETE /api/isp/plans/:id
-   * Eliminar un plan de BD
-   */
-  async deletePlan(req, res) {
+  ispController.deletePlan = async function(req, res) {
     try {
       const { id } = req.params;
       const pool = getIspPool();
@@ -1275,15 +1057,7 @@ const ispController = {
     }
   },
 
-  // ==========================================================
-  // SINCRONIZACIÓN DE CLIENTES
-  // ==========================================================
-
-  /**
-   * POST /api/isp/clients/sync
-   * Importar todos los PPP secrets desde RouterOS a la BD local
-   */
-  async syncPPPSecrets(req, res) {
+  ispController.syncPPPSecrets = async function(req, res) {
     try {
       const secrets = await engine.getPPPSecrets();
       const pool = getIspPool();
@@ -1333,11 +1107,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/hotspot/users/sync
-   * Importar usuarios Hotspot desde RouterOS a la BD local
-   */
-  async syncHotspotUsers(req, res) {
+  ispController.syncHotspotUsers = async function(req, res) {
     try {
       const users = await engine.getHotspotUsers();
       const pool = getIspPool();
@@ -1385,11 +1155,7 @@ const ispController = {
     }
   },
 
-  /**
-   * POST /api/isp/clients/:username/sync-one
-   * Sincronizar un cliente específico desde RouterOS a BD
-   */
-  async syncOneClient(req, res) {
+  ispController.syncOneClient = async function(req, res) {
     try {
       const { username } = req.params;
       const service = req.body?.service || 'pppoe';
@@ -1424,19 +1190,11 @@ const ispController = {
     }
   }
 
-  // ==========================================================
-  // GESTIÓN DE ROUTERS (Detección, conexión manual, dominio)
-  // ==========================================================
-
-  /**
-   * GET /api/isp/routers
-   * Listar todos los routers registrados
-   */
-  async getRouters(req, res) {
+  ispController.getRouters = async function(req, res) {
     try {
       const pool = getIspPool();
       const [rows] = await pool.execute(
-        'SELECT id, name, host, port, username, ssl, api_port, identity, model, version, is_active, is_online, last_connected_at, discovery_method, comment, created_at, updated_at FROM isp_routers ORDER BY is_active DESC, name ASC'
+        'SELECT id, name, host, port, username, `ssl`, api_port, identity, model, version, is_active, is_online, last_connected_at, discovery_method, comment, created_at, updated_at FROM isp_routers ORDER BY is_active DESC, name ASC'
       );
       res.json({ success: true, data: rows });
     } catch (error) {
@@ -1444,11 +1202,7 @@ const ispController = {
     }
   }
 
-  /**
-   * POST /api/isp/routers
-   * Agregar un router manualmente (IP o dominio)
-   */
-  async addRouter(req, res) {
+  ispController.addRouter = async function(req, res) {
     try {
       const { name, host, port, username, password, ssl, api_port, comment } = req.body;
       if (!name || !host) {
@@ -1467,7 +1221,7 @@ const ispController = {
       });
 
       await pool.execute(
-        `INSERT INTO isp_routers (id, name, host, port, username, password, ssl, api_port, identity, model, version, is_online, discovery_method, comment)
+        `INSERT INTO isp_routers (id, name, host, port, username, password, \`ssl\`, api_port, identity, model, version, is_online, discovery_method, comment)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id, name, host, routerPort,
@@ -1492,11 +1246,7 @@ const ispController = {
     }
   }
 
-  /**
-   * PUT /api/isp/routers/:id
-   * Actualizar configuración de un router
-   */
-  async updateRouter(req, res) {
+  ispController.updateRouter = async function(req, res) {
     try {
       const { id } = req.params;
       const { name, host, port, username, password, ssl, api_port, comment } = req.body;
@@ -1514,7 +1264,7 @@ const ispController = {
       if (port !== undefined) { updates.push('port = ?'); params.push(port); }
       if (username !== undefined) { updates.push('username = ?'); params.push(username); }
       if (password !== undefined) { updates.push('password = ?'); params.push(password); }
-      if (ssl !== undefined) { updates.push('ssl = ?'); params.push(ssl ? 1 : 0); }
+      if (ssl !== undefined) { updates.push('\`ssl\` = ?'); params.push(ssl ? 1 : 0); }
       if (api_port !== undefined) { updates.push('api_port = ?'); params.push(api_port); }
       if (comment !== undefined) { updates.push('comment = ?'); params.push(comment); }
 
@@ -1532,11 +1282,7 @@ const ispController = {
     }
   }
 
-  /**
-   * DELETE /api/isp/routers/:id
-   * Eliminar un router registrado
-   */
-  async deleteRouter(req, res) {
+  ispController.deleteRouter = async function(req, res) {
     try {
       const { id } = req.params;
       const pool = getIspPool();
@@ -1550,11 +1296,7 @@ const ispController = {
     }
   }
 
-  /**
-   * POST /api/isp/routers/:id/test
-   * Probar conexión con un router registrado
-   */
-  async testRouterConnection(req, res) {
+  ispController.testRouterConnection = async function(req, res) {
     try {
       const { id } = req.params;
       const pool = getIspPool();
@@ -1584,11 +1326,7 @@ const ispController = {
     }
   }
 
-  /**
-   * POST /api/isp/routers/:id/activate
-   * Establecer un router como activo para operaciones ISP
-   */
-  async setActiveRouter(req, res) {
+  ispController.setActiveRouter = async function(req, res) {
     try {
       const { id } = req.params;
       const pool = getIspPool();
@@ -1619,11 +1357,7 @@ const ispController = {
     }
   }
 
-  /**
-   * POST /api/isp/routers/scan
-   * Escanear red local para detectar routers MikroTik
-   */
-  async scanNetwork(req, res) {
+  ispController.scanNetwork = async function(req, res) {
     try {
       const { subnet, username, password, timeout } = req.body;
       if (!subnet) {
@@ -1646,7 +1380,7 @@ const ispController = {
                 const id = uuidv4();
                 const bestService = router.services.find(s => s.connected) || {};
                 await pool.execute(
-                  `INSERT INTO isp_routers (id, name, host, port, username, password, ssl, identity, version, is_online, discovery_method)
+                  `INSERT INTO isp_routers (id, name, host, port, username, password, \`ssl\`, identity, version, is_online, discovery_method)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'scan')`,
                   [
                     id,
@@ -1672,11 +1406,7 @@ const ispController = {
     }
   }
 
-  /**
-   * POST /api/isp/routers/scan-host
-   * Escanear un host específico (IP o dominio)
-   */
-  async scanHost(req, res) {
+  ispController.scanHost = async function(req, res) {
     try {
       const { host, username, password } = req.body;
       if (!host) {
@@ -1690,15 +1420,11 @@ const ispController = {
     }
   }
 
-  /**
-   * GET /api/isp/routers/active
-   * Obtener el router activo actual
-   */
-  async getActiveRouter(req, res) {
+  ispController.getActiveRouter = async function(req, res) {
     try {
       const pool = getIspPool();
       const [rows] = await pool.execute(
-        'SELECT id, name, host, port, username, ssl, identity, model, version, is_online, last_connected_at FROM isp_routers WHERE is_active = 1 LIMIT 1'
+        'SELECT id, name, host, port, username, \`ssl\`, identity, model, version, is_online, last_connected_at FROM isp_routers WHERE is_active = 1 LIMIT 1'
       );
       if (rows.length === 0) {
         // Devolver el router configurado por defecto (env vars)
@@ -1721,6 +1447,6 @@ const ispController = {
       res.status(500).json({ success: false, message: error.message });
     }
   }
-};
+
 
 module.exports = ispController;
