@@ -835,6 +835,265 @@ const ispController = {
     } catch (error) {
       return { sent: false, error: error.message };
     }
+  },
+
+  // ==========================================================
+  // SINCRONIZACIÓN - Importar perfiles desde RouterOS a BD
+  // ==========================================================
+
+  /**
+   * POST /api/isp/ppp/profiles/sync
+   * Importar todos los perfiles PPP desde RouterOS a la BD local
+   */
+  async syncPPPProfiles(req, res) {
+    try {
+      const profiles = await engine.getPPPProfiles();
+      const pool = getIspPool();
+      let imported = 0;
+      let updated = 0;
+
+      for (const profile of profiles) {
+        const name = profile.name;
+        if (!name || name === 'default' || name === 'default-encryption') continue;
+
+        // Verificar si ya existe en BD
+        const [existing] = await pool.execute(
+          `SELECT id FROM isp_plans WHERE routeros_name = ? AND service = 'pppoe'`,
+          [name]
+        );
+
+        const speedLimit = profile['rate-limit'] || null;
+        const onlyOne = profile['only-one'] || null;
+        const comment = profile.comment || null;
+
+        if (existing.length > 0) {
+          // Actualizar existente
+          await pool.execute(
+            `UPDATE isp_plans SET speed_limit = ?, comment = ?, sync_status = 'synced' WHERE routeros_name = ? AND service = 'pppoe'`,
+            [speedLimit, comment, name]
+          );
+          updated++;
+        } else {
+          // Crear nuevo
+          const id = uuidv4();
+          await pool.execute(
+            `INSERT INTO isp_plans (id, name, service, speed_limit, routeros_name, sync_status, comment)
+             VALUES (?, ?, 'pppoe', ?, ?, 'synced', ?)`,
+            [id, name, speedLimit, name, comment]
+          );
+          imported++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Sincronización completada: ${imported} importados, ${updated} actualizados`,
+        data: { imported, updated, total: profiles.length }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  /**
+   * POST /api/isp/hotspot/profiles/sync
+   * Importar perfiles Hotspot desde RouterOS a la BD
+   */
+  async syncHotspotProfiles(req, res) {
+    try {
+      const profiles = await engine.getHotspotProfiles();
+      const pool = getIspPool();
+      let imported = 0;
+      let updated = 0;
+
+      for (const profile of profiles) {
+        const name = profile.name;
+        if (!name || name === 'default') continue;
+
+        const [existing] = await pool.execute(
+          `SELECT id FROM isp_plans WHERE routeros_name = ? AND service = 'hotspot'`,
+          [name]
+        );
+
+        const speedLimit = profile['rate-limit'] || null;
+        const sharedUsers = parseInt(profile['shared-users']) || 1;
+        const comment = profile.comment || null;
+
+        if (existing.length > 0) {
+          await pool.execute(
+            `UPDATE isp_plans SET speed_limit = ?, shared_users = ?, comment = ?, sync_status = 'synced' WHERE routeros_name = ? AND service = 'hotspot'`,
+            [speedLimit, sharedUsers, comment, name]
+          );
+          updated++;
+        } else {
+          const id = uuidv4();
+          await pool.execute(
+            `INSERT INTO isp_plans (id, name, service, speed_limit, shared_users, routeros_name, sync_status, comment)
+             VALUES (?, ?, 'hotspot', ?, ?, ?, 'synced', ?)`,
+            [id, name, speedLimit, sharedUsers, name, comment]
+          );
+          imported++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Sincronización completada: ${imported} importados, ${updated} actualizados`,
+        data: { imported, updated, total: profiles.length }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  /**
+   * POST /api/isp/pools/sync
+   * Importar IP Pools desde RouterOS a la BD
+   */
+  async syncIPPools(req, res) {
+    try {
+      const pools = await engine.getIPPools();
+      const pool = getIspPool();
+      let imported = 0;
+      let updated = 0;
+
+      for (const p of pools) {
+        const name = p.name;
+        if (!name) continue;
+
+        const [existing] = await pool.execute(
+          `SELECT id FROM isp_ip_pools WHERE name = ?`,
+          [name]
+        );
+
+        const ranges = p.ranges || null;
+        const comment = p.comment || null;
+
+        if (existing.length > 0) {
+          await pool.execute(
+            `UPDATE isp_ip_pools SET ranges = ?, comment = ?, sync_status = 'synced' WHERE name = ?`,
+            [ranges, comment, name]
+          );
+          updated++;
+        } else {
+          const id = uuidv4();
+          await pool.execute(
+            `INSERT INTO isp_ip_pools (id, name, ranges, sync_status, comment)
+             VALUES (?, ?, ?, 'synced', ?)`,
+            [id, name, ranges, comment]
+          );
+          imported++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Sincronización completada: ${imported} importados, ${updated} actualizados`,
+        data: { imported, updated, total: pools.length }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  // ==========================================================
+  // PLANES - CRUD desde BD local
+  // ==========================================================
+
+  /**
+   * GET /api/isp/plans
+   * Obtener planes desde la BD local
+   */
+  async getPlans(req, res) {
+    try {
+      const pool = getIspPool();
+      const service = req.query.service || null;
+      let query = 'SELECT * FROM isp_plans';
+      const params = [];
+
+      if (service) {
+        query += ' WHERE service = ?';
+        params.push(service);
+      }
+
+      query += ' ORDER BY service, name';
+      const [rows] = await pool.execute(query, params);
+
+      res.json({ success: true, data: rows });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  /**
+   * POST /api/isp/plans
+   * Crear un plan en BD (sin RouterOS)
+   */
+  async createPlan(req, res) {
+    try {
+      const { name, service, speedLimit, sessionTimeout, sharedUsers, price, comment } = req.body;
+      if (!name || !service) {
+        return res.status(400).json({ success: false, message: 'Nombre y servicio son requeridos' });
+      }
+
+      const pool = getIspPool();
+      const id = uuidv4();
+      await pool.execute(
+        `INSERT INTO isp_plans (id, name, service, speed_limit, session_timeout, shared_users, price, comment, sync_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        [id, name, service, speedLimit || null, sessionTimeout || null, sharedUsers || 1, price || null, comment || null]
+      );
+
+      res.status(201).json({ success: true, data: { id, name, service } });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  /**
+   * PUT /api/isp/plans/:id
+   * Actualizar un plan en BD
+   */
+  async updatePlan(req, res) {
+    try {
+      const { id } = req.params;
+      const { name, service, speedLimit, sessionTimeout, sharedUsers, price, comment } = req.body;
+
+      const pool = getIspPool();
+      const updates = [];
+      const params = [];
+
+      if (name) { updates.push('name = ?'); params.push(name); }
+      if (service) { updates.push('service = ?'); params.push(service); }
+      if (speedLimit !== undefined) { updates.push('speed_limit = ?'); params.push(speedLimit); }
+      if (sessionTimeout !== undefined) { updates.push('session_timeout = ?'); params.push(sessionTimeout); }
+      if (sharedUsers) { updates.push('shared_users = ?'); params.push(sharedUsers); }
+      if (price !== undefined) { updates.push('price = ?'); params.push(price); }
+      if (comment !== undefined) { updates.push('comment = ?'); params.push(comment); }
+      updates.push("sync_status = 'pending'");
+
+      params.push(id);
+      await pool.execute(`UPDATE isp_plans SET ${updates.join(', ')} WHERE id = ?`, params);
+
+      res.json({ success: true, message: 'Plan actualizado' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+  /**
+   * DELETE /api/isp/plans/:id
+   * Eliminar un plan de BD
+   */
+  async deletePlan(req, res) {
+    try {
+      const { id } = req.params;
+      const pool = getIspPool();
+      await pool.execute(`DELETE FROM isp_plans WHERE id = ?`, [id]);
+      res.json({ success: true, message: 'Plan eliminado' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
   }
 };
 

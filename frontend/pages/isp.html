@@ -1,0 +1,380 @@
+<!-- ISP Manager - Panel de Gestión Centralizada -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">
+      <span class="page-icon">📡</span>
+      ISP Manager
+    </h1>
+    <p class="page-subtitle">Gestión centralizada de clientes, perfiles y monitoreo RouterOS</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-outline" onclick="ISP.refresh()">
+      <span>🔄</span> Actualizar
+    </button>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid" id="isp-stats">
+  <div class="stat-card">
+    <div class="stat-icon">👥</div>
+    <div class="stat-value" id="stat-clientes">-</div>
+    <div class="stat-label">Clientes</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">📋</div>
+    <div class="stat-value" id="stat-planes">-</div>
+    <div class="stat-label">Planes</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">📶</div>
+    <div class="stat-value" id="stat-ppp-active">-</div>
+    <div class="stat-label">PPP Activos</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🔵</div>
+    <div class="stat-value" id="stat-hotspot-active">-</div>
+    <div class="stat-label">Hotspot Activos</div>
+  </div>
+</div>
+
+<!-- Tabs de navegación -->
+<div class="tabs-container">
+  <div class="tabs-nav">
+    <button class="tab-btn active" data-tab="ppp-profiles" onclick="ISP.switchTab('ppp-profiles')">
+      📋 Perfiles PPP
+    </button>
+    <button class="tab-btn" data-tab="hotspot-profiles" onclick="ISP.switchTab('hotspot-profiles')">
+      🔥 Perfiles Hotspot
+    </button>
+    <button class="tab-btn" data-tab="pools" onclick="ISP.switchTab('pools')">
+      📦 IP Pools
+    </button>
+    <button class="tab-btn" data-tab="plans" onclick="ISP.switchTab('plans')">
+      💰 Planes
+    </button>
+    <button class="tab-btn" data-tab="system" onclick="ISP.switchTab('system')">
+      🖥️ Sistema
+    </button>
+  </div>
+
+  <!-- TAB: Perfiles PPP -->
+  <div class="tab-content active" id="tab-ppp-profiles">
+    <div class="section-header">
+      <h2>Perfiles PPP</h2>
+      <div class="section-actions">
+        <button class="btn btn-sm btn-outline" onclick="ISP.syncProfiles('ppp')">
+          <span>🔄</span> Sincronizar
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="ISP.showCreateProfileModal('ppp')">
+          <span>➕</span> Nuevo Perfil
+        </button>
+      </div>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Rate Limit</th>
+            <th>Local Address</th>
+            <th>Remote Address</th>
+            <th>Only One</th>
+            <th>Comentario</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="isp-ppp-profiles-body">
+          <tr><td colspan="7" class="text-center">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: Perfiles Hotspot -->
+  <div class="tab-content" id="tab-hotspot-profiles">
+    <div class="section-header">
+      <h2>Perfiles Hotspot</h2>
+      <div class="section-actions">
+        <button class="btn btn-sm btn-outline" onclick="ISP.syncProfiles('hotspot')">
+          <span>🔄</span> Sincronizar
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="ISP.showCreateProfileModal('hotspot')">
+          <span>➕</span> Nuevo Perfil
+        </button>
+      </div>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Rate Limit</th>
+            <th>Shared Users</th>
+            <th>Session Timeout</th>
+            <th>Idle Timeout</th>
+            <th>Comentario</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="isp-hotspot-profiles-body">
+          <tr><td colspan="7" class="text-center">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: IP Pools -->
+  <div class="tab-content" id="tab-pools">
+    <div class="section-header">
+      <h2>IP Pools</h2>
+      <div class="section-actions">
+        <button class="btn btn-sm btn-outline" onclick="ISP.syncProfiles('pools')">
+          <span>🔄</span> Sincronizar
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="ISP.showCreatePoolModal()">
+          <span>➕</span> Nuevo Pool
+        </button>
+      </div>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Rangos</th>
+            <th>Comentario</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="isp-pools-body">
+          <tr><td colspan="4" class="text-center">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: Planes -->
+  <div class="tab-content" id="tab-plans">
+    <div class="section-header">
+      <h2>Planes (Base de Datos)</h2>
+      <div class="section-actions">
+        <button class="btn btn-sm btn-primary" onclick="ISP.showCreatePlanModal()">
+          <span>➕</span> Nuevo Plan
+        </button>
+      </div>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Servicio</th>
+            <th>Speed Limit</th>
+            <th>Session Timeout</th>
+            <th>Shared Users</th>
+            <th>Precio</th>
+            <th>Sync</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="isp-plans-body">
+          <tr><td colspan="8" class="text-center">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: Sistema -->
+  <div class="tab-content" id="tab-system">
+    <div class="section-header">
+      <h2>Información del Sistema</h2>
+    </div>
+    <div class="stats-grid" id="isp-system-info">
+      <div class="stat-card">
+        <div class="stat-icon">🏷️</div>
+        <div class="stat-value" id="sys-identity">-</div>
+        <div class="stat-label">Identidad</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💻</div>
+        <div class="stat-value" id="sys-version">-</div>
+        <div class="stat-label">Versión</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-value" id="sys-cpu">-</div>
+        <div class="stat-label">CPU Load</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏱️</div>
+        <div class="stat-value" id="sys-uptime">-</div>
+        <div class="stat-label">Uptime</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h2>Interfaces</h2>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>MAC Address</th>
+            <th>Estado</th>
+            <th>Comentario</th>
+          </tr>
+        </thead>
+        <tbody id="isp-interfaces-body">
+          <tr><td colspan="5" class="text-center">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para crear/editar perfil -->
+<div id="isp-profile-modal" class="modal" style="display:none;">
+  <div class="modal-backdrop" onclick="ISP.closeModal('isp-profile-modal')"></div>
+  <div class="modal-content modal-sm">
+    <div class="modal-header">
+      <h3 id="isp-profile-modal-title">Nuevo Perfil</h3>
+      <button class="modal-close" onclick="ISP.closeModal('isp-profile-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="isp-profile-form" onsubmit="ISP.saveProfile(event)">
+        <input type="hidden" id="profile-type" value="ppp">
+        <div class="form-group">
+          <label>Nombre del Perfil</label>
+          <input type="text" id="profile-name" class="form-control" required placeholder="ej: Clientes_10M">
+        </div>
+        <div class="form-group">
+          <label>Rate Limit</label>
+          <input type="text" id="profile-rate-limit" class="form-control" placeholder="ej: 10M/10M">
+        </div>
+        <div id="ppp-fields">
+          <div class="form-group">
+            <label>Local Address</label>
+            <input type="text" id="profile-local-address" class="form-control" placeholder="ej: 192.168.88.1">
+          </div>
+          <div class="form-group">
+            <label>Remote Address</label>
+            <input type="text" id="profile-remote-address" class="form-control" placeholder="ej: 192.168.88.0/24">
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="profile-only-one"> Only One (una sesión por usuario)
+            </label>
+          </div>
+        </div>
+        <div id="hotspot-fields" style="display:none;">
+          <div class="form-group">
+            <label>Shared Users</label>
+            <input type="number" id="profile-shared-users" class="form-control" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label>Session Timeout</label>
+            <input type="text" id="profile-session-timeout" class="form-control" placeholder="ej: 1d">
+          </div>
+          <div class="form-group">
+            <label>Idle Timeout</label>
+            <input type="text" id="profile-idle-timeout" class="form-control" placeholder="ej: 30m">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Comentario</label>
+          <input type="text" id="profile-comment" class="form-control" placeholder="Comentario opcional">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" onclick="ISP.closeModal('isp-profile-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para crear pool -->
+<div id="isp-pool-modal" class="modal" style="display:none;">
+  <div class="modal-backdrop" onclick="ISP.closeModal('isp-pool-modal')"></div>
+  <div class="modal-content modal-sm">
+    <div class="modal-header">
+      <h3>Nuevo IP Pool</h3>
+      <button class="modal-close" onclick="ISP.closeModal('isp-pool-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="isp-pool-form" onsubmit="ISP.savePool(event)">
+        <div class="form-group">
+          <label>Nombre del Pool</label>
+          <input type="text" id="pool-name" class="form-control" required placeholder="ej: pool-clientes">
+        </div>
+        <div class="form-group">
+          <label>Rangos</label>
+          <input type="text" id="pool-ranges" class="form-control" required placeholder="ej: 192.168.88.100-192.168.88.200">
+          <small class="form-text">Formato: inicio-fin (separados por coma para múltiples rangos)</small>
+        </div>
+        <div class="form-group">
+          <label>Comentario</label>
+          <input type="text" id="pool-comment" class="form-control" placeholder="Comentario opcional">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" onclick="ISP.closeModal('isp-pool-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para crear plan -->
+<div id="isp-plan-modal" class="modal" style="display:none;">
+  <div class="modal-backdrop" onclick="ISP.closeModal('isp-plan-modal')"></div>
+  <div class="modal-content modal-sm">
+    <div class="modal-header">
+      <h3>Nuevo Plan</h3>
+      <button class="modal-close" onclick="ISP.closeModal('isp-plan-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="isp-plan-form" onsubmit="ISP.savePlan(event)">
+        <div class="form-group">
+          <label>Nombre del Plan</label>
+          <input type="text" id="plan-name" class="form-control" required placeholder="ej: Plan Básico 10M">
+        </div>
+        <div class="form-group">
+          <label>Servicio</label>
+          <select id="plan-service" class="form-control">
+            <option value="pppoe">PPPoE</option>
+            <option value="hotspot">Hotspot</option>
+            <option value="vpn">VPN</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Speed Limit</label>
+          <input type="text" id="plan-speed-limit" class="form-control" placeholder="ej: 10M/10M">
+        </div>
+        <div class="form-group">
+          <label>Session Timeout</label>
+          <input type="text" id="plan-session-timeout" class="form-control" placeholder="ej: 1d">
+        </div>
+        <div class="form-group">
+          <label>Shared Users</label>
+          <input type="number" id="plan-shared-users" class="form-control" value="1" min="1">
+        </div>
+        <div class="form-group">
+          <label>Precio ($)</label>
+          <input type="number" id="plan-price" class="form-control" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label>Comentario</label>
+          <input type="text" id="plan-comment" class="form-control" placeholder="Comentario opcional">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" onclick="ISP.closeModal('isp-plan-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
