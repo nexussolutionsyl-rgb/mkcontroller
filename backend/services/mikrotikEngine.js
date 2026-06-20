@@ -867,6 +867,96 @@ class MikrotikEngine {
       pools: pools.length
     };
   }
+
+  /**
+   * Auto-detecta routers MikroTik en la red local
+   * Escanea subredes comunes (/24) y prueba credenciales por defecto
+   * Funciona como WinBox: descubre routers en la misma red
+   * @param {Object} [options] - Opciones de escaneo
+   * @param {string[]} [options.subnets] - Subredes a escanear (auto-detectadas si no se especifican)
+   * @param {string} [options.username='admin'] - Usuario por defecto para probar
+   * @param {string} [options.password=''] - Contraseña por defecto para probar
+   * @param {number} [options.timeout=3000] - Timeout por host
+   * @param {number} [options.concurrency=20] - Hosts simultáneos
+   * @returns {Promise<Array>} Lista de routers detectados con { host, port, ssl, identity, version }
+   */
+  static async autoDetect(options = {}) {
+    const {
+      subnets,
+      username = 'admin',
+      password = '',
+      timeout = 3000,
+      concurrency = 20
+    } = options;
+
+    // Si no se especificaron subredes, detectar automáticamente
+    let subnetsToScan = subnets;
+    if (!subnetsToScan || subnetsToScan.length === 0) {
+      subnetsToScan = await MikrotikEngine._detectLocalSubnets();
+    }
+
+    console.log(`[MikrotikEngine] Auto-detect: escaneando ${subnetsToScan.length} subred(es): ${subnetsToScan.join(', ')}`);
+
+    const allDetected = [];
+    const seen = new Set();
+
+    for (const subnet of subnetsToScan) {
+      try {
+        const detected = await MikrotikEngine.scanNetwork(subnet, { username, password }, timeout, concurrency);
+        for (const router of detected) {
+          if (!seen.has(router.host)) {
+            seen.add(router.host);
+            allDetected.push(router);
+          }
+        }
+      } catch (err) {
+        console.error(`[MikrotikEngine] Error escaneando subred ${subnet}: ${err.message}`);
+      }
+    }
+
+    console.log(`[MikrotikEngine] Auto-detect: ${allDetected.length} router(es) encontrado(s)`);
+    return allDetected;
+  }
+
+  /**
+   * Detecta las subredes locales del servidor
+   * Obtiene las IPs de las interfaces de red y genera subredes /24
+   * @returns {Promise<string[]>} Lista de subredes en formato CIDR
+   */
+  static async _detectLocalSubnets() {
+    const subnets = [];
+    const os = require('os');
+    const interfaces = os.networkInterfaces();
+
+    for (const [name, addrs] of Object.entries(interfaces)) {
+      if (!addrs) continue;
+      for (const addr of addrs) {
+        // Solo IPv4, no loopback, no internas de docker
+        if (addr.family === 'IPv4' && !addr.internal && !name.startsWith('docker') && !name.startsWith('veth')) {
+          const parts = addr.address.split('.');
+          if (parts.length === 4) {
+            // Generar /24 a partir de la IP
+            const subnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+            if (!subnets.includes(subnet)) {
+              subnets.push(subnet);
+            }
+            // También agregar /24 de la gateway (asumiendo .1)
+            const gatewaySubnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+            if (!subnets.includes(gatewaySubnet)) {
+              subnets.push(gatewaySubnet);
+            }
+          }
+        }
+      }
+    }
+
+    // Si no se detectaron subredes, usar subredes comunes
+    if (subnets.length === 0) {
+      subnets.push('192.168.88.0/24', '192.168.1.0/24', '192.168.0.0/24', '10.0.0.0/24');
+    }
+
+    return subnets;
+  }
 }
 
 module.exports = MikrotikEngine;

@@ -38,6 +38,9 @@ const engine = new MikrotikEngine(config.isp?.mikrotik);
 // Helper: Obtener y configurar el router activo desde la BD
 // ============================================================
 let _lastRouterId = null;
+let _autoDetectInProgress = false;
+let _lastAutoDetectTime = 0;
+const AUTO_DETECT_COOLDOWN = 60000; // 1 minuto entre auto-detecciones
 
 async function _ensureRouterConfigured() {
   try {
@@ -78,7 +81,58 @@ async function _ensureRouterConfigured() {
       return { id: '__env__', host: envHost };
     }
 
-    // No hay router configurado
+    // No hay router configurado - intentar auto-detección en la red local
+    const now = Date.now();
+    if (!_autoDetectInProgress && (now - _lastAutoDetectTime) > AUTO_DETECT_COOLDOWN) {
+      _autoDetectInProgress = true;
+      _lastAutoDetectTime = now;
+
+      // Ejecutar auto-detección asíncronamente (no bloqueante)
+      MikrotikEngine.autoDetect({ username: 'admin', password: '', timeout: 2000, concurrency: 30 })
+        .then(async (detected) => {
+          _autoDetectInProgress = false;
+          if (detected.length > 0) {
+            console.log(`[ISP] Auto-detect: ${detected.length} router(es) encontrado(s). Guardando en BD...`);
+            try {
+              const p = getIspPool();
+              for (const router of detected) {
+                const [existing] = await p.execute(
+                  'SELECT id FROM isp_routers WHERE host = ?', [router.host]
+                );
+                if (existing.length === 0) {
+                  const id = uuidv4();
+                  const bestService = router.services.find(s => s.connected) || {};
+                  await p.execute(
+                    `INSERT INTO isp_routers (id, name, host, port, username, password, \`ssl\`, identity, version, is_online, discovery_method)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'auto-detect')`,
+                    [
+                      id,
+                      router.identity || `Router-${router.host}`,
+                      router.host,
+                      bestService.port || 443,
+                      'admin',
+                      '',
+                      bestService.ssl ? 1 : 0,
+                      router.identity || null,
+                      router.version || null
+                    ]
+                  );
+                  console.log(`[ISP] Router auto-detectado guardado: ${router.identity || router.host} (${router.host})`);
+                }
+              }
+            } catch (err) {
+              console.error('[ISP] Error guardando routers auto-detectados:', err.message);
+            }
+          } else {
+            console.log('[ISP] Auto-detect: no se encontraron routers en la red local');
+          }
+        })
+        .catch(err => {
+          _autoDetectInProgress = false;
+          console.error('[ISP] Error en auto-detección:', err.message);
+        });
+    }
+
     throw new Error('No hay un router activo configurado. Configure un router en la pestaña Routers o defina las variables ISP_MIKROTIK_* en el archivo .env');
   } catch (error) {
     if (error.message.includes('No hay un router activo')) {
