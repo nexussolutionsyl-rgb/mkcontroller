@@ -156,6 +156,7 @@ const App = {
       'nexusmk': { title: 'nexusMK', file: 'nexusmk.html', auth: true },
       'users': { title: 'Usuarios', file: 'users.html', auth: true },
       'clients': { title: 'Clientes', file: 'clients.html', auth: true },
+      'isp': { title: 'ISP Manager', file: 'isp.html', auth: true },
       'winbox': { title: 'WinBox / WebFig', file: 'winbox.html', auth: true },
       'profile': { title: 'Mi Perfil', file: 'profile.html', auth: true }
     };

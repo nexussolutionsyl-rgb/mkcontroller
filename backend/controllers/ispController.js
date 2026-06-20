@@ -1392,7 +1392,7 @@ const ispController = {
   async syncOneClient(req, res) {
     try {
       const { username } = req.params;
-      const { service } = req.body || 'pppoe';
+      const service = req.body?.service || 'pppoe';
       const pool = getIspPool();
 
       let clientData;
